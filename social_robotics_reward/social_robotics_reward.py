@@ -1,10 +1,9 @@
-import array
 import os
 import tempfile
-
-import soundfile
-import pyaudio
 import wave
+
+import pyaudio
+import soundfile
 
 
 class MicrophoneSegmenter:
@@ -64,18 +63,55 @@ class MicrophoneSegmenter:
                 frames = frames[chunks_per_period:]
 
 
+class AudioFileSegmenter:
+    def __init__(self, file: str) -> None:
+        self._file = file
+
+        self._audio_data, self._sample_rate = soundfile.read(self._file)
+
+    def __enter__(self) -> 'AudioFileSegmenter':
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+    def gen(self, segment_duration_s=2.0, period_propn=0.5):
+        segment_duration_samples = int(segment_duration_s * self._sample_rate)
+        period_samples = int(segment_duration_s * self._sample_rate * period_propn)
+
+        cursor = 0
+        while True:
+            yield self._audio_data[cursor:cursor+segment_duration_samples], self._sample_rate
+            cursor += period_samples
+            if cursor >= len(self._audio_data):
+                return
+
+
 if __name__ == '__main__':
+    # Output dir:
+    out_dir = 'out'
+    os.mkdir(out_dir)  # raises if exists
+
     # Read audio data from file:
-    audio_data, sample_rate = soundfile.read('samples/03-01-01-01-02-01-03_neutral.wav')
-    print(audio_data.shape)
-    print(sample_rate)
+    with AudioFileSegmenter(file='samples/03-01-01-01-02-01-03_neutral.wav') as audio_file_segmenter:
+        gen = audio_file_segmenter.gen()
+        l_audio_data = []
+        for idx in range(10):
+            try:
+                audio_data, sample_rate = next(gen)
+                l_audio_data.append(audio_data)
+                soundfile.write(os.path.join(out_dir, f'file_{idx}.wav'), audio_data, sample_rate)
+            except StopIteration:
+                break
 
     # Read audio data from mic:
-    with MicrophoneSegmenter() as microphone_segmenter:
-        gen = microphone_segmenter.gen()
+    with MicrophoneSegmenter() as audio_file_segmenter:
+        gen = audio_file_segmenter.gen()
         l_audio_data = []
-        for _ in range(5):
-            audio_data, sample_rate = next(gen)
-            l_audio_data.append(audio_data)
-
-        print(len(audio_data))
+        for idx in range(5):
+            try:
+                audio_data, sample_rate = next(gen)
+                l_audio_data.append(audio_data)
+                soundfile.write(os.path.join(out_dir, f'mic_{idx}.wav'), audio_data, sample_rate)
+            except StopIteration:
+                break
