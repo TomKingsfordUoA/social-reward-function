@@ -28,6 +28,8 @@ class MicrophoneSegmenter:
             rate=MicrophoneSegmenter.RATE,
             input=True,
             frames_per_buffer=MicrophoneSegmenter.CHUNK)
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._temp_dir.__enter__()
 
         return self
 
@@ -35,58 +37,31 @@ class MicrophoneSegmenter:
         self._stream.stop_stream()
         self._stream.close()
         self._p.terminate()
+        self._temp_dir.__exit__(exc_type, exc_val, exc_tb)
 
-    # TODO(TK): support overlapping segments
-    def gen(self, segment_duration_s=2.0):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_file = os.path.join(temp_dir, 'tmp.wav')
-            while True:
-                frames = []
-                for i in range(0, int(MicrophoneSegmenter.RATE / MicrophoneSegmenter.CHUNK * segment_duration_s)):
-                    frames.append(self._stream.read(MicrophoneSegmenter.CHUNK))  # 2 bytes(16 bits) per channel
+    def gen(self, segment_duration_s=2.0, period_propn=0.5):
+        chunks_per_segment = int(MicrophoneSegmenter.RATE / MicrophoneSegmenter.CHUNK * segment_duration_s)
+        chunks_per_period = int(MicrophoneSegmenter.RATE / MicrophoneSegmenter.CHUNK * segment_duration_s * period_propn)
 
+        frames = []
+        while True:
+            # Each segment is a sequence of chunks. Read all the chunks for a new segment:
+            for _ in range(chunks_per_segment):
+                frames.append(self._stream.read(MicrophoneSegmenter.CHUNK))  # 2 bytes(16 bits) per channel
+
+            while len(frames) >= chunks_per_segment:
                 # TODO(TK): ideally convert from frames to waveform without writing to file
+                temp_file = os.path.join(self._temp_dir.name, 'tmp.wav')
                 with wave.open(temp_file, 'wb') as wf:
                     wf.setnchannels(MicrophoneSegmenter.CHANNELS)
                     wf.setsampwidth(self._p.get_sample_size(MicrophoneSegmenter.FORMAT))
                     wf.setframerate(MicrophoneSegmenter.RATE)
-                    wf.writeframes(b''.join(frames))
+                    wf.writeframes(b''.join(frames[:chunks_per_segment]))
 
                 yield soundfile.read(temp_file)
 
-    @staticmethod
-    def record_from_mic(segment_duration_s=4.0):
-        CHUNK = 1024
-        FORMAT = pyaudio.paInt16  # paInt8
-        CHANNELS = 1
-        RATE = 44100  # sample rate
-
-        p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=RATE,
-                        input=True,
-                        frames_per_buffer=CHUNK)  # buffer
-
-        frames = []
-        for i in range(0, int(RATE / CHUNK * segment_duration_s)):
-            frames.append(stream.read(CHUNK))  # 2 bytes(16 bits) per channel
-
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_file = os.path.join(temp_dir, 'tmp.wav')
-
-            # TODO(TK): ideally convert from frames to waveform without writing to file
-            with wave.open(temp_file, 'wb') as wf:
-                wf.setnchannels(CHANNELS)
-                wf.setsampwidth(p.get_sample_size(FORMAT))
-                wf.setframerate(RATE)
-                wf.writeframes(b''.join(frames))
-
-            return soundfile.read(temp_file)
+                # Advance a period:
+                frames = frames[chunks_per_period:]
 
 
 if __name__ == '__main__':
@@ -96,13 +71,11 @@ if __name__ == '__main__':
     print(sample_rate)
 
     # Read audio data from mic:
-    audio_data, sample_rate = MicrophoneSegmenter.record_from_mic(segment_duration_s=2.0)
-    print(audio_data.shape)
-    print(sample_rate)
-
     with MicrophoneSegmenter() as microphone_segmenter:
-        gen = microphone_segmenter.gen(segment_duration_s=0.5)
-        for _ in range(10):
+        gen = microphone_segmenter.gen()
+        l_audio_data = []
+        for _ in range(5):
             audio_data, sample_rate = next(gen)
-            print(audio_data.shape)
-            print(sample_rate)
+            l_audio_data.append(audio_data)
+
+        print(len(audio_data))
