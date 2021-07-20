@@ -1,3 +1,6 @@
+import importlib.resources
+import os
+
 import soundfile
 import librosa
 import numpy as np
@@ -88,10 +91,11 @@ def get_best_estimators(classification):
     you can fine tune the parameters in `grid_search.py` script
     and run it again ( may take hours )
     """
+    grid_dir = os.path.join(os.path.dirname(__file__), 'grid')
     if classification:
-        return pickle.load(open("grid/best_classifiers.pickle", "rb"))
+        return pickle.load(open(os.path.join(grid_dir, 'best_classifiers.pickle'), "rb"))
     else:
-        return pickle.load(open("grid/best_regressors.pickle", "rb"))
+        return pickle.load(open(os.path.join(grid_dir, 'best_regressors.pickle'), "rb"))
 
 
 def get_audio_config(features_list):

@@ -7,8 +7,8 @@ from sys import byteorder
 import pyaudio
 import soundfile
 
-from emotion_recognition import EmotionRecognizer
-from utils import get_best_estimators
+from .emotion_recognition import EmotionRecognizer
+from .utils import get_best_estimators
 
 THRESHOLD = 500
 CHUNK_SIZE = 1024

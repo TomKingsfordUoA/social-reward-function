@@ -1,21 +1,20 @@
+import os
+import random
+from time import time
+
+import matplotlib.pyplot as pl
+import numpy as np
+import pandas as pd
+import tqdm
 from numpy.typing import ArrayLike
-
-from data_extractor import load_data
-from utils import extract_feature, AVAILABLE_EMOTIONS
-from create_csv import write_emodb_csv, write_tess_ravdess_csv, write_custom_csv
-
 from sklearn.metrics import accuracy_score, make_scorer, fbeta_score, mean_squared_error, mean_absolute_error
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
-import matplotlib.pyplot as pl
-from time import time
-from utils import get_best_estimators, get_audio_config
-import numpy as np
-import tqdm
-import os
-import random
-import pandas as pd
+from .utils import extract_feature, AVAILABLE_EMOTIONS
+from .utils import get_best_estimators, get_audio_config
+from .create_csv import write_emodb_csv, write_tess_ravdess_csv, write_custom_csv
+from .data_extractor import load_data
 
 
 class EmotionRecognizer:
@@ -74,8 +73,6 @@ class EmotionRecognizer:
 
         # set metadata path file names
         self._set_metadata_filenames()
-        # write csv's anyway
-        self.write_csv()
 
         # boolean attributes
         self.data_loaded = False
@@ -88,15 +85,16 @@ class EmotionRecognizer:
         - `self.test_desc_files` for testing CSVs
         """
         train_desc_files, test_desc_files = [], []
+        module_root = os.path.dirname(__file__)
         if self.tess_ravdess:
-            train_desc_files.append(f"train_{self.tess_ravdess_name}")
-            test_desc_files.append(f"test_{self.tess_ravdess_name}")
+            train_desc_files.append(os.path.join(module_root, f"train_{self.tess_ravdess_name}"))
+            test_desc_files.append(os.path.join(module_root, f"test_{self.tess_ravdess_name}"))
         if self.emodb:
-            train_desc_files.append(f"train_{self.emodb_name}")
-            test_desc_files.append(f"test_{self.emodb_name}")
+            train_desc_files.append(os.path.join(module_root, f"train_{self.emodb_name}"))
+            test_desc_files.append(os.path.join(module_root, f"test_{self.emodb_name}"))
         if self.custom_db:
-            train_desc_files.append(f"train_{self.custom_db_name}")
-            test_desc_files.append(f"test_{self.custom_db_name}")
+            train_desc_files.append(os.path.join(module_root, f"train_{self.custom_db_name}"))
+            test_desc_files.append(os.path.join(module_root, f"test_{self.custom_db_name}"))
 
         # set them to be object attributes
         self.train_desc_files = train_desc_files
@@ -159,6 +157,7 @@ class EmotionRecognizer:
         """
         Train the model, if data isn't loaded, it 'll be loaded automatically
         """
+        self.write_csv()
         if not self.data_loaded:
             # if data isn't loaded yet, load it then
             self.load_data()

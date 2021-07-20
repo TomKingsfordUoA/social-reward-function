@@ -1,14 +1,13 @@
 
+import os
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
-import pickle
-
 import soundfile
 import tqdm
-import os
 
-from utils import get_label, extract_feature, get_first_letters
-from collections import defaultdict
+from .utils import get_label, extract_feature, get_first_letters
 
 
 class AudioExtractor:

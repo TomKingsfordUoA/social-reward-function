@@ -97,11 +97,12 @@ def write_custom_csv(emotions=['sad', 'neutral', 'happy'], train_name="train_cus
         test_name (str): the output csv filename for testing data, default is 'test_custom.csv'
         verbose (int/bool): verbositiy level, 0 for silence, 1 for info, default is 1
     """
+    module_root = os.path.dirname(__file__)
     train_target = {"path": [], "emotion": []}
     test_target = {"path": [], "emotion": []}
     for category in emotions:
         # train data
-        for i, file in enumerate(glob.glob(f"data/train-custom/*_{category}.wav")):
+        for i, file in enumerate(glob.glob(os.path.join(module_root, f"data/train-custom/*_{category}.wav"))):
             train_target["path"].append(file)
             train_target["emotion"].append(category)
         if verbose:
@@ -112,7 +113,7 @@ def write_custom_csv(emotions=['sad', 'neutral', 'happy'], train_name="train_cus
                 pass
         
         # test data
-        for i, file in enumerate(glob.glob(f"data/test-custom/*_{category}.wav")):
+        for i, file in enumerate(glob.glob(os.path.join(module_root, f"data/test-custom/*_{category}.wav"))):
             test_target["path"].append(file)
             test_target["emotion"].append(category)
         if verbose:
@@ -123,7 +124,7 @@ def write_custom_csv(emotions=['sad', 'neutral', 'happy'], train_name="train_cus
     
     # write CSVs
     if train_target["path"]:
-        pd.DataFrame(train_target).to_csv(train_name)
+        pd.DataFrame(train_target).to_csv(os.path.join(module_root, train_name))
 
     if test_target["path"]:
-        pd.DataFrame(test_target).to_csv(test_name)
+        pd.DataFrame(test_target).to_csv(os.path.join(module_root, test_name))
