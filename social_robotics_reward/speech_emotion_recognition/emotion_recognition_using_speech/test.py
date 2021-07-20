@@ -155,13 +155,5 @@ if __name__ == "__main__":
     print("Test accuracy score: {:.3f}%".format(detector.test_score()*100))
 
     # print("Please talk")
-    # filename = "test.wav"
-    # record_to_file(filename)
-
-    samples_dir = '../../../samples'
-    for filename in os.listdir(samples_dir):
-        with soundfile.SoundFile(os.path.join(samples_dir, filename)) as sound_file:
-            audio_data = sound_file.read(dtype="float32")
-            sample_rate = sound_file.samplerate
-        result = detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
-        print(f"{filename} -> {result}")
+    filename = "test.wav"
+    record_to_file(filename)
