@@ -17,8 +17,8 @@ from social_robotics_reward.video_frame_generation import VideoFileFrameGenerato
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False)
-    parser.add_argument('--audio', action='store_true', default=False)
-    parser.add_argument('--video', action='store_true', default=True)
+    parser.add_argument('--audio', action='store_true', default=True)
+    parser.add_argument('--video', action='store_true', default=False)
     args = parser.parse_args()
 
     is_running = True
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         with _audio_frame_generator as audio_frame_generator:
             for audio_data, sample_rate in audio_frame_generator.gen(
                     segment_duration_s=1.0,
-                    period_propn=0.5,
+                    period_propn=0.25,
             ):
                 if not is_running:
                     print("Stopping")

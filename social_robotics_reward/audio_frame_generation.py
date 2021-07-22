@@ -4,6 +4,7 @@ import tempfile
 import wave
 from typing import Generator, Tuple, Any, Optional
 
+import librosa
 import pyaudio  # type: ignore
 import soundfile  # type: ignore
 from numpy.typing import ArrayLike
@@ -77,18 +78,17 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
                     wf.setframerate(MicrophoneFrameGenerator.RATE)
                     wf.writeframes(b''.join(frames[:chunks_per_segment]))
 
-                yield soundfile.read(temp_file)
+                yield librosa.load(temp_file)
 
                 # Advance a period:
                 frames = frames[chunks_per_period:]
 
 
-# TODO(TK): handleaudio from mp4 video files
 class AudioFileFrameGenerator(AudioFrameGenerator):
     def __init__(self, file: str) -> None:
         self._file = file
 
-        self._audio_data, self._sample_rate = soundfile.read(self._file)
+        self._audio_data, self._sample_rate = librosa.load(self._file)
 
     def __enter__(self) -> 'AudioFileFrameGenerator':
         return self
