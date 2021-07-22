@@ -1,10 +1,9 @@
 import argparse
-import os
 import signal
 
 import pandas as pd
 
-from social_robotics_reward.audio_segment_generation import AudioFileSegmenter, MicrophoneSegmenter
+from social_robotics_reward.audio_segment_generation import AudioFileFrameGenerator, MicrophoneFrameGenerator
 from social_robotics_reward.speech_emotion_recognition.emotion_recognition_using_speech.emotion_recognition import \
     EmotionRecognizer
 from social_robotics_reward.speech_emotion_recognition.emotion_recognition_using_speech.test import get_estimators_name
@@ -24,15 +23,15 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
     # Read audio segments:
-    voice_emotion_predictions = []
     if args.file is not None:
-        _audio_segmenter = AudioFileSegmenter(file=args.file)
+        _audio_segmenter = AudioFileFrameGenerator(file=args.file)
     else:
-        _audio_segmenter = MicrophoneSegmenter()
+        _audio_segmenter = MicrophoneFrameGenerator()
+    voice_emotion_predictions = []
     with _audio_segmenter as audio_segmenter:
         for audio_data, sample_rate in audio_segmenter.gen(
-            segment_duration_s=1.0,
-            period_propn=0.5,
+                segment_duration_s=1.0,
+                period_propn=0.5,
         ):
             if not is_running:
                 print("Stopping")
