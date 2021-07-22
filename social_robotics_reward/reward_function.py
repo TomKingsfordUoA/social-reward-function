@@ -1,13 +1,14 @@
 import argparse
 import signal
+import typing
+from typing import Any
 
-import pandas as pd
+import pandas as pd  # type: ignore
 
-from social_robotics_reward.audio_segment_generation import AudioFileFrameGenerator, MicrophoneFrameGenerator
-from social_robotics_reward.speech_emotion_recognition.emotion_recognition_using_speech.emotion_recognition import \
-    EmotionRecognizer
-from social_robotics_reward.speech_emotion_recognition.emotion_recognition_using_speech.test import get_estimators_name
-from social_robotics_reward.speech_emotion_recognition.emotion_recognition_using_speech.utils import get_best_estimators
+from .audio_frame_generation import AudioFileFrameGenerator, MicrophoneFrameGenerator, AudioFrameGenerator
+from .external.emotion_recognition_using_speech.emotion_recognition import EmotionRecognizer  # type: ignore
+from .external.emotion_recognition_using_speech.test import get_estimators_name  # type: ignore
+from .external.emotion_recognition_using_speech.utils import get_best_estimators  # type: ignore
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -16,7 +17,7 @@ if __name__ == '__main__':
 
     is_running = True
 
-    def signal_handler(signum, frame):
+    def signal_handler(signum: Any, frame: Any) -> None:
         global is_running
         is_running = False
 
@@ -24,7 +25,7 @@ if __name__ == '__main__':
 
     # Read audio segments:
     if args.file is not None:
-        _audio_segmenter = AudioFileFrameGenerator(file=args.file)
+        _audio_segmenter: AudioFrameGenerator = AudioFileFrameGenerator(file=args.file)
     else:
         _audio_segmenter = MicrophoneFrameGenerator()
     voice_emotion_predictions = []
@@ -40,7 +41,7 @@ if __name__ == '__main__':
                 # Predict audio segments
                 estimators = get_best_estimators(classification=True)
                 estimators_str, estimator_dict = get_estimators_name(estimators)
-                best_estimator = max(estimators, key=lambda elem: elem[2])  # elem[2] is the accuracy
+                best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is the accuracy
                 detector = EmotionRecognizer(best_estimator[0])
                 voice_emotion_predictions.append(detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate))
             except StopIteration:

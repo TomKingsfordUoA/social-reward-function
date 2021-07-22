@@ -3,7 +3,7 @@ import os
 from typing import Generator, Any
 
 from numpy.typing import ArrayLike
-import cv2
+import cv2  # type: ignore
 
 
 class VideoFrameGenerator(abc.ABC):
