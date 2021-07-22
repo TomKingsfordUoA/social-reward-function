@@ -37,7 +37,7 @@ if __name__ == '__main__':
             _audio_frame_generator = MicrophoneFrameGenerator()
         voice_emotion_predictions = []
         with _audio_frame_generator as audio_frame_generator:
-            for audio_data, sample_rate in audio_frame_generator.gen(
+            for timestamp_s, audio_data, sample_rate in audio_frame_generator.gen(
                     segment_duration_s=1.0,
                     period_propn=0.25,
             ):
@@ -50,8 +50,11 @@ if __name__ == '__main__':
                 estimators_str, estimator_dict = get_estimators_name(estimators)
                 best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is the accuracy
                 detector = EmotionRecognizer(best_estimator[0])
-                voice_emotion_predictions.append(detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate))
-            df_emotions = pd.DataFrame(voice_emotion_predictions)
+
+                predicted_emotions = detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
+                predicted_emotions['timestamp'] = timestamp_s
+                voice_emotion_predictions.append(predicted_emotions)
+            df_emotions = pd.DataFrame(voice_emotion_predictions).set_index('timestamp')
             print(df_emotions)
             print(df_emotions.mean())
 
