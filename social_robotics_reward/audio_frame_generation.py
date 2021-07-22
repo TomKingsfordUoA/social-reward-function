@@ -5,7 +5,7 @@ import time
 import wave
 from typing import Generator, Tuple, Any, Optional
 
-import librosa
+import librosa  # type: ignore
 import pyaudio  # type: ignore
 import soundfile  # type: ignore
 from numpy.typing import ArrayLike

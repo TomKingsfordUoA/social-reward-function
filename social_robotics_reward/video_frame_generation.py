@@ -10,6 +10,7 @@ import cv2  # type: ignore
 Timestamp_s = float
 
 
+# TODO(TK): these are expensive operations so should probably use multiprocessing
 class VideoFrameGenerator(abc.ABC):
     def __enter__(self) -> 'VideoFrameGenerator':
         raise NotImplementedError()
