@@ -80,7 +80,7 @@ In order to determine the best model, you can by:
 # and set the model to the best in terms of test score, and then train it
 rec.determine_best_model(train=True)
 # get the determined sklearn model name
-print(rec.model.__class__.__name__, "is the best")
+print(rec.rmn.__class__.__name__, "is the best")
 # get the test accuracy score for the best estimator
 print("Test score:", rec.test_score())
 ```

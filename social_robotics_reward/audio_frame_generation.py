@@ -20,6 +20,7 @@ class AudioFrameGenerator(abc.ABC):
         raise NotImplementedError()
 
 
+# TODO(TK): optionally record the microphone audio to file for posterity
 class MicrophoneFrameGenerator(AudioFrameGenerator):
     CHUNK = 1024
     FORMAT = pyaudio.paInt16  # paInt8
