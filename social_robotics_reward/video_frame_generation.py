@@ -27,6 +27,8 @@ class WebcamFrameGenerator(VideoFrameGenerator):
             ret, frame = cap.read()
             if ret:
                 yield frame
+            else:
+                return
         cap.release()
 
 
@@ -49,4 +51,6 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             ret, frame = cap.read()
             if ret:
                 yield frame
+            else:
+                return
         cap.release()

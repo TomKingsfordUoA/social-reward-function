@@ -82,6 +82,7 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
                 frames = frames[chunks_per_period:]
 
 
+# TODO(TK): handleaudio from mp4 video files
 class AudioFileFrameGenerator(AudioFrameGenerator):
     def __init__(self, file: str) -> None:
         self._file = file
