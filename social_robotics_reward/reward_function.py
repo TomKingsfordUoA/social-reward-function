@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False)
     parser.add_argument('--audio', action='store_true', default=True)
-    parser.add_argument('--video', action='store_true', default=False)
+    parser.add_argument('--video', action='store_true', default=True)
     args = parser.parse_args()
 
     is_running = True
@@ -51,8 +51,8 @@ if __name__ == '__main__':
                 best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is the accuracy
                 detector = EmotionRecognizer(best_estimator[0])
 
-                predicted_emotions = detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
-                predicted_emotions['timestamp'] = timestamp_s
+                predicted_emotions = {'timestamp': timestamp_s}
+                predicted_emotions |= detector.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
                 voice_emotion_predictions.append(predicted_emotions)
             df_emotions = pd.DataFrame(voice_emotion_predictions).set_index('timestamp')
             print(df_emotions)
@@ -67,19 +67,21 @@ if __name__ == '__main__':
         with _video_frame_generator as video_frame_generator:
             rmn = RMN()
 
-            for video_frame in video_frame_generator.gen():
+            for timestamp_s, video_frame in video_frame_generator.gen():
                 if not is_running:
                     print("Stopping")
                     break
 
                 # Predict video frames:
                 detected_facial_emotions = rmn.detect_emotion_for_single_frame(video_frame)  # nb this is potentially multiple faces
-                facial_emotion_predictions.extend([{key: value for item in face['proba_list'] for key, value in item.items()}
-                                                   for face in detected_facial_emotions])
+                facial_emotion_predictions.extend([
+                    {'timestamp': timestamp_s}
+                    | {key: value for item in face['proba_list'] for key, value in item.items()} for face in detected_facial_emotions
+                ])
                 if len(facial_emotion_predictions) >= 1:
                     print(facial_emotion_predictions[-1])
 
-            df_emotions = pd.DataFrame(facial_emotion_predictions)
+            df_emotions = pd.DataFrame(facial_emotion_predictions).set_index('timestamp')
             print(df_emotions)
             print(df_emotions.mean())
 
