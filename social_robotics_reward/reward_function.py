@@ -19,6 +19,8 @@ from social_robotics_reward.video_frame_generation import VideoFileFrameGenerato
 class RewardSignal:
     timestamp_s: float
     combined_reward: float
+    audio_reward: typing.Optional[float]
+    video_reward: typing.Optional[float]
     detected_audio_emotions: pd.DataFrame
     detected_video_emotions: pd.DataFrame
 
@@ -26,6 +28,8 @@ class RewardSignal:
         return f"RewardSignal(\n" \
                f"\ttimestamp_s={self.timestamp_s}\n" \
                f"\tcombined_reward={self.combined_reward}\n" \
+               f"\taudio_reward={self.audio_reward}\n"\
+               f"\tvideo_reward={self.video_reward}\n" \
                f"\tdetected_audio_emotions=\n{self.detected_audio_emotions.mean()}\n" \
                f"\tdetected_video_emotions=\n{self.detected_video_emotions.mean()}\n" \
                f")"
@@ -54,7 +58,6 @@ class RewardFunction:
         best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is accuracy
         return EmotionRecognizer(best_estimator[0])  # type: ignore
 
-    # TODO(TK): This should probably return a RewardSignal object with timestamp, facial emotions, speech emotions, combined reward
     def gen(self, period_s: float) -> Generator[RewardSignal, None, None]:
         gen_video_frames = self._video_frame_generator.gen()
         gen_audio_frames = self._audio_frame_generator.gen(segment_duration_s=self._audio_segment_duration_s, period_propn=self._audio_period_propn)
@@ -87,11 +90,42 @@ class RewardFunction:
                     audio_frame_predictions = [self._audio_classifier.predict_proba(audio_data=frame.audio_data, sample_rate=frame.sample_rate)
                                                for frame in included_audio_frames]
 
+                    df_video_emotions = pd.DataFrame(data=video_frame_predictions)
+                    df_audio_emotions = pd.DataFrame(data=audio_frame_predictions)
+
+                    # Calculate the combined reward:
+                    # TODO(TK): move these to a parameters file
+                    wt_audio = 1.0
+                    wt_video = 1.0
+                    series_audio_coefficients = pd.Series(data={
+                        'happy': 1.0,
+                        'neutral': -0.1,
+                        'sad': -1.0,
+                    })
+                    series_video_coefficients = pd.Series(data={
+                        'angry': -1.0,
+                        'disgust': -1.0,
+                        'fear': -1.0,
+                        'happy': 1.0,
+                        'sad': -1.0,
+                        'surprise': 0.0,
+                        'neutral': 0.0,
+                    })
+                    if not df_audio_emotions.empty and set(series_audio_coefficients.index) != set(df_audio_emotions.columns):
+                        raise ValueError(f"Unexpected audio emotions: got {df_audio_emotions.columns} expected {series_audio_coefficients.index}")
+                    if not df_video_emotions.empty and set(series_video_coefficients.index) != set(df_video_emotions.columns):
+                        raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {series_video_coefficients.index}")
+                    audio_reward = None if df_audio_emotions.empty else (series_audio_coefficients * df_audio_emotions).to_numpy().mean()
+                    video_reward = None if df_video_emotions.empty else (series_video_coefficients * df_video_emotions).to_numpy().mean()
+                    combined_reward = wt_audio * (audio_reward if audio_reward is not None else 0.0) + wt_video * (video_reward if video_reward is not None else 0.0)
+
                     yield RewardSignal(
                         timestamp_s=timestamp_current,
-                        combined_reward=0.0,  # TODO(TK): implement
-                        detected_video_emotions=pd.DataFrame(data=video_frame_predictions),
-                        detected_audio_emotions=pd.DataFrame(data=audio_frame_predictions),
+                        combined_reward=combined_reward,
+                        video_reward=video_reward,
+                        audio_reward=audio_reward,
+                        detected_video_emotions=df_video_emotions,
+                        detected_audio_emotions=df_audio_emotions,
                     )
 
                     video_frames = [frame for frame in video_frames if frame.timestamp_s >= timestamp_current]
