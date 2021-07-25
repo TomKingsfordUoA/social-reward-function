@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import dataclasses
 import os
 import tempfile
@@ -26,7 +27,7 @@ class AudioFrameGenerator(abc.ABC):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         raise NotImplementedError()
 
-    def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
         raise NotImplementedError()
 
 
@@ -65,7 +66,7 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
             self._p.terminate()
         self._temp_dir.__exit__(exc_type, exc_val, exc_tb)
 
-    def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
         if self._stream is None or self._p is None:
             raise NameError("Uninitialized. Did you forget to call inside a context manager?")
 
@@ -77,6 +78,8 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
         while True:
             # Each segment is a sequence of chunks. Read all the chunks for a new segment:
             for _ in range(chunks_per_segment):
+                # TODO(TK): we should use non-blocking mode, have a callback populate a queue and await that queue being
+                #  big enough
                 frames.append(self._stream.read(MicrophoneFrameGenerator.CHUNK))  # 2 bytes(16 bits) per channel
 
             while len(frames) >= chunks_per_segment:
@@ -107,13 +110,19 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
-    def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
         segment_duration_samples = int(segment_duration_s * self._sample_rate)
         period_samples = int(segment_duration_s * self._sample_rate * period_propn)
 
         cursor = 0
+        time_initial = time.time()
         while True:
             timestamp = (cursor + segment_duration_samples) / self._sample_rate
+
+            # TODO(TK): this is necessary so video and audio produce at appropriate relative rates. Replace this with correct temporal mixing
+            #  of multiple generators producing timstamped frames
+            await asyncio.sleep(timestamp - (time.time() - time_initial))
+
             yield AudioFrame(timestamp_s=timestamp, audio_data=self._audio_data[cursor:cursor+segment_duration_samples], sample_rate=self._sample_rate)
             cursor += period_samples
             if cursor >= len(self._audio_data):
@@ -123,15 +132,15 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
 if __name__ == '__main__':
     # Output dir:
     out_dir = 'out'
-    os.mkdir(out_dir)  # raises if exists
+    os.mkdir(out_dir)
 
     # Read audio data from file:
-    with AudioFileFrameGenerator(file='samples/03-01-01-01-02-01-03_neutral.wav') as audio_file_segmenter:
-        gen = audio_file_segmenter.gen()
+    with AudioFileFrameGenerator(file='samples/01-01-01-01-01-01-01_neutral.mp4') as audio_file_segmenter:
+        gen = audio_file_segmenter.gen(segment_duration_s=1.0, period_propn=0.25)
         l_audio_data = []
         for idx in range(10):
             try:
-                audio_frame = next(gen)
+                audio_frame = asyncio.run(gen.__anext__())
                 l_audio_data.append(audio_frame.audio_data)
                 soundfile.write(os.path.join(out_dir, f'file_{idx}.wav'), audio_frame.audio_data, audio_frame.sample_rate)
             except StopIteration:
@@ -143,7 +152,7 @@ if __name__ == '__main__':
         l_audio_data = []
         for idx in range(5):
             try:
-                audio_frame = next(gen)
+                audio_frame = asyncio.run(gen.__anext__())
                 l_audio_data.append(audio_frame.audio_data)
                 soundfile.write(os.path.join(out_dir, f'mic_{idx}.wav'), audio_frame.audio_data, audio_frame.sample_rate)
             except StopIteration:
