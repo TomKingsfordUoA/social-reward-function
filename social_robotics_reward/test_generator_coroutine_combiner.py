@@ -1,3 +1,5 @@
+# type: ignore
+
 import asyncio
 
 from social_robotics_reward import generator_coroutine_combiner
@@ -18,10 +20,10 @@ def test_interleave_temporally() -> None:
             y += 1
 
     async def accumulate():
-        combined_generator = generator_coroutine_combiner.interleave_temporally(
+        combined_generator = generator_coroutine_combiner.interleave_temporally([
             GeneratorMeta(generator=generator_0(), get_timestamp=lambda d: d['timestamp']),
             GeneratorMeta(generator=generator_1(), get_timestamp=lambda d: d['timestamp']),
-        )
+        ])
 
         return [await combined_generator.__anext__() for _ in range(5)]
 
@@ -50,10 +52,10 @@ def test_interleave_temporally_exhausted() -> None:
                 y += 1
 
     async def accumulate():
-        combined_generator = generator_coroutine_combiner.interleave_temporally(
+        combined_generator = generator_coroutine_combiner.interleave_temporally([
             GeneratorMeta(generator=X().generator_0(), get_timestamp=lambda d: d['timestamp']),
             GeneratorMeta(generator=X().generator_1(), get_timestamp=lambda d: d['timestamp']),
-        )
+        ])
 
         return [await combined_generator.__anext__() for _ in range(5)]
 
@@ -81,10 +83,10 @@ def test_interleave_fifo() -> None:
             y += 1
 
     async def accumulate():
-        combined_generator = generator_coroutine_combiner.interleave_fifo(
+        combined_generator = generator_coroutine_combiner.interleave_fifo([
             generator_0(),
             generator_1(),
-        )
+        ])
 
         return [await combined_generator.__anext__() for _ in range(5)]
 

@@ -2,7 +2,7 @@ import abc
 import dataclasses
 import os
 import time
-from typing import Generator, Any, Optional
+from typing import Any, Optional, AsyncGenerator
 
 import cv2  # type: ignore
 from numpy.typing import ArrayLike
@@ -22,7 +22,8 @@ class VideoFrameGenerator(abc.ABC):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         raise NotImplementedError()
 
-    async def gen(self) -> Generator[VideoFrame, None, None]:
+    async def gen(self) -> AsyncGenerator[VideoFrame, None]:
+        yield VideoFrame(timestamp_s=0, video_data=[])
         raise NotImplementedError()
 
 
@@ -37,7 +38,7 @@ class WebcamFrameGenerator(VideoFrameGenerator):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
-    async def gen(self) -> Generator[VideoFrame, None, None]:
+    async def gen(self) -> AsyncGenerator[VideoFrame, None]:
         cap = cv2.VideoCapture(0)  # noqa
         timestamp_initial = time.time()
         while cap.isOpened():
@@ -62,7 +63,7 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
-    async def gen(self) -> Generator[VideoFrame, None, None]:
+    async def gen(self) -> AsyncGenerator[VideoFrame, None]:
         cap = cv2.VideoCapture(self._file)  # noqa
         timestamp_s_prev: Optional[float] = None
         while cap.isOpened():

@@ -5,7 +5,7 @@ import os
 import tempfile
 import time
 import wave
-from typing import Generator, Any, Optional
+from typing import Any, Optional, AsyncGenerator
 
 import librosa  # type: ignore
 import pyaudio  # type: ignore
@@ -27,7 +27,8 @@ class AudioFrameGenerator(abc.ABC):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         raise NotImplementedError()
 
-    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> AsyncGenerator[AudioFrame, None]:
+        yield AudioFrame(timestamp_s=0, audio_data=[], sample_rate=0)
         raise NotImplementedError()
 
 
@@ -66,7 +67,7 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
             self._p.terminate()
         self._temp_dir.__exit__(exc_type, exc_val, exc_tb)
 
-    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> AsyncGenerator[AudioFrame, None]:
         if self._stream is None or self._p is None:
             raise NameError("Uninitialized. Did you forget to call inside a context manager?")
 
@@ -110,7 +111,7 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
-    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> Generator[AudioFrame, None, None]:
+    async def gen(self, segment_duration_s: float = 2.0, period_propn: float = 0.5) -> AsyncGenerator[AudioFrame, None]:
         segment_duration_samples = int(segment_duration_s * self._sample_rate)
         period_samples = int(segment_duration_s * self._sample_rate * period_propn)
 

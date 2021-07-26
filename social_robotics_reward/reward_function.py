@@ -1,7 +1,6 @@
 import asyncio
 import dataclasses
-import typing
-from typing import Generator
+from typing import Optional, cast, AsyncGenerator
 
 import pandas as pd  # type: ignore
 
@@ -16,8 +15,8 @@ from social_robotics_reward.video_frame_generation import VideoFrame
 class RewardSignal:
     timestamp_s: float
     combined_reward: float
-    audio_reward: typing.Optional[float]
-    video_reward: typing.Optional[float]
+    audio_reward: Optional[float]
+    video_reward: Optional[float]
     detected_audio_emotions: pd.DataFrame
     detected_video_emotions: pd.DataFrame
 
@@ -34,8 +33,8 @@ class RewardSignal:
 
 class RewardFunction:
     def __init__(self) -> None:
-        self._queue_video_frames = asyncio.Queue()
-        self._queue_audio_frames = asyncio.Queue()
+        self._queue_video_frames: asyncio.Queue[VideoFrame] = asyncio.Queue()
+        self._queue_audio_frames: asyncio.Queue[AudioFrame] = asyncio.Queue()
 
         # Initialize emotion classifiers:
         self._audio_classifier = RewardFunction._load_audio_classifier()
@@ -44,7 +43,7 @@ class RewardFunction:
     @staticmethod
     def _load_audio_classifier() -> EmotionRecognizer:
         estimators = get_best_estimators(classification=True)  # type: ignore
-        best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is accuracy
+        best_estimator = max(estimators, key=lambda elem: cast(float, elem[2]))  # elem[2] is accuracy
         return EmotionRecognizer(best_estimator[0])  # type: ignore
 
     async def push_video_frame(self, video_frame: VideoFrame) -> None:
@@ -53,7 +52,7 @@ class RewardFunction:
     async def push_audio_frame(self, audio_frame: AudioFrame) -> None:
         await self._queue_audio_frames.put(audio_frame)
 
-    async def gen(self, period_s: float) -> Generator[RewardSignal, None, None]:
+    async def gen(self, period_s: float) -> AsyncGenerator[RewardSignal, None]:
         video_frames = [await self._queue_video_frames.get()]
         audio_frames = [await self._queue_audio_frames.get()]
         timestamp_last = min(video_frames[0].timestamp_s, audio_frames[0].timestamp_s)

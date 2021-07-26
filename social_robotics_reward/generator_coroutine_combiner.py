@@ -1,6 +1,6 @@
 import asyncio
 import dataclasses
-from typing import TypeVar, Generic, Callable, AsyncGenerator, List
+from typing import TypeVar, Generic, Callable, AsyncGenerator, List, Any
 
 T = TypeVar('T')
 Timestamp = float
@@ -12,16 +12,17 @@ class GeneratorMeta(Generic[T]):
     get_timestamp: Callable[[T], Timestamp]
 
 
-async def interleave_temporally(*generators: GeneratorMeta[T]) -> AsyncGenerator[T, None]:
+async def interleave_temporally(generators: List[GeneratorMeta[Any]]) -> AsyncGenerator[Any, None]:
     """
     Gets one element from each of the generators, then releases the element with the earliest timestamp in turn until
     all generators are exhausted.
     """
 
-    remaining_generators = list(generators)
-    funcs_get_timestamp = [generator_meta.get_timestamp for generator_meta in remaining_generators]
+    remaining_generators: List[GeneratorMeta[Any]] = list(generators)
+    # TODO(TK): why is the type ignore required?
+    funcs_get_timestamp: List[Callable[[Any], Timestamp]] = [generator_meta.get_timestamp for generator_meta in remaining_generators]  # type: ignore
 
-    elements: List[T] = [await generator_meta.generator.__anext__() for generator_meta in remaining_generators]
+    elements: List[Any] = [await generator_meta.generator.__anext__() for generator_meta in remaining_generators]
     timestamps: List[Timestamp] = [funcs_get_timestamp[idx](elements[idx]) for idx in range(len(elements))]
 
     while len(remaining_generators) != 0:
@@ -40,7 +41,7 @@ async def interleave_temporally(*generators: GeneratorMeta[T]) -> AsyncGenerator
             del timestamps[releasable_element_idx]
 
 
-async def interleave_fifo(*generators: AsyncGenerator[T, None]) -> AsyncGenerator[T, None]:
+async def interleave_fifo(generators: List[AsyncGenerator[Any, None]]) -> AsyncGenerator[Any, None]:
     """
     Simply combined into an AsyncGenerator which yields the elements from the generators in the order they're yielded
     by the AsyncGenerators.
@@ -57,7 +58,6 @@ async def interleave_fifo(*generators: AsyncGenerator[T, None]) -> AsyncGenerato
             # Wait for the first task to complete:
             await next(asyncio.as_completed(tasks))
 
-            results = []
             for idx in range(len(tasks)):
                 if tasks[idx].done():
                     yield tasks[idx].result()
