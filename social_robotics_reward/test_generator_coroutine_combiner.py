@@ -98,3 +98,30 @@ def test_interleave_fifo() -> None:
         {'timestamp': 2.5, 'y': 1.0},
         {'timestamp': 2.0, 'x': 2.0},
     ]
+
+
+def test_interleave_fifo_stop_at_first() -> None:
+    async def generator_0():
+        x = 0.0
+        for _ in range(2):
+            yield {'timestamp': x, 'x': x}
+            x += 1
+
+    async def generator_1():
+        y = 0.0
+        while True:
+            yield {'timestamp': y + 1.5, 'y': y}
+            y += 1
+
+    async def accumulate():
+        combined_generator = generator_coroutine_combiner.interleave_fifo([generator_0(), generator_1()], stop_at_first=True)
+
+        return [elem async for elem in combined_generator]
+
+    result = asyncio.run(accumulate())
+    assert result == [
+        {'timestamp': 0.0, 'x': 0.0},
+        {'timestamp': 1.5, 'y': 0.0},
+        {'timestamp': 1.0, 'x': 1.0},
+        {'timestamp': 2.5, 'y': 1.0},
+    ]
