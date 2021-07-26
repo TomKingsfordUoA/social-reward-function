@@ -1,20 +1,15 @@
-import argparse
 import asyncio
 import dataclasses
-import signal
 import typing
-from typing import Any, Generator, Dict
+from typing import Generator
 
 import pandas as pd  # type: ignore
 
 from emotion_recognition_using_speech.emotion_recognition import EmotionRecognizer
 from emotion_recognition_using_speech.utils import get_best_estimators
 from residual_masking_network import RMN
-from social_robotics_reward.audio_frame_generation import AudioFrameGenerator, AudioFileFrameGenerator, \
-    MicrophoneFrameGenerator, AudioFrame
-from social_robotics_reward.generator_coroutine_combiner import interleave_temporally, GeneratorMeta
-from social_robotics_reward.video_frame_generation import VideoFileFrameGenerator, VideoFrameGenerator, \
-    WebcamFrameGenerator, VideoFrame
+from social_robotics_reward.audio_frame_generation import AudioFrame
+from social_robotics_reward.video_frame_generation import VideoFrame
 
 
 @dataclasses.dataclass(frozen=True)
@@ -60,9 +55,7 @@ class RewardFunction:
 
     async def gen(self, period_s: float) -> Generator[RewardSignal, None, None]:
         video_frames = [await self._queue_video_frames.get()]
-        print("reward func got first video frame")
         audio_frames = [await self._queue_audio_frames.get()]
-        print("reward func got first audio frame")
         timestamp_last = min(video_frames[0].timestamp_s, audio_frames[0].timestamp_s)
 
         # TODO(TK): the logic of combining the two streams (at different frequencies) into a single stream of a constant
@@ -72,10 +65,8 @@ class RewardFunction:
             # TODO(TK): probably do prediction at the same time and perform in parallel with multiprocessing
             if audio_frames[-1].timestamp_s < video_frames[-1].timestamp_s:
                 audio_frames.append(await self._queue_audio_frames.get())
-                print("reward func got audio frame")
             else:
                 video_frames.append(await self._queue_video_frames.get())
-                print("reward func got video frame")
 
             # Are we ready to release a reward signal?
             timestamp_current = min(video_frames[-1].timestamp_s, audio_frames[-1].timestamp_s)
@@ -117,7 +108,10 @@ class RewardFunction:
                     raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {series_video_coefficients.index}")
                 audio_reward = None if df_audio_emotions.empty else (series_audio_coefficients * df_audio_emotions).to_numpy().mean()
                 video_reward = None if df_video_emotions.empty else (series_video_coefficients * df_video_emotions).to_numpy().mean()
-                combined_reward = wt_audio * (audio_reward if audio_reward is not None else 0.0) + wt_video * (video_reward if video_reward is not None else 0.0)
+                combined_reward = (
+                        wt_audio * (audio_reward if audio_reward is not None else 0.0) +
+                        wt_video * (video_reward if video_reward is not None else 0.0)
+                )
 
                 yield RewardSignal(
                     timestamp_s=timestamp_current,
@@ -131,79 +125,3 @@ class RewardFunction:
                 video_frames = [frame for frame in video_frames if frame.timestamp_s >= timestamp_current]
                 audio_frames = [frame for frame in audio_frames if frame.timestamp_s >= timestamp_current]
                 timestamp_last = timestamp_current
-
-
-async def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file', type=str, required=False)
-    parser.add_argument('--audio_period_propn', type=float, default=0.25)
-    parser.add_argument('--audio_segment_duration_s', type=float, default=1.0)
-    parser.add_argument('--reward_period_s', type=float, default=0.5)
-    args = parser.parse_args()
-
-    is_running = True
-
-    def signal_handler(signum: Any, frame: Any) -> None:
-        global is_running
-        is_running = False
-
-    signal.signal(signal.SIGINT, signal_handler)
-
-    if args.file is not None:
-        _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(file=args.file)
-        _video_frame_generator: VideoFrameGenerator = VideoFileFrameGenerator(file=args.file)
-    else:
-        _audio_frame_generator = MicrophoneFrameGenerator()
-        _video_frame_generator = WebcamFrameGenerator()
-
-    with _audio_frame_generator as audio_frame_generator, _video_frame_generator as video_frame_generator:
-        gen_video_frames = video_frame_generator.gen()
-        gen_audio_frames = audio_frame_generator.gen(segment_duration_s=args.audio_segment_duration_s, period_propn=args.audio_period_propn)
-        gen_sensors = interleave_temporally(
-            GeneratorMeta(generator=gen_video_frames, get_timestamp=lambda video_frame: video_frame.timestamp_s),
-            GeneratorMeta(generator=gen_audio_frames, get_timestamp=lambda audio_frame: audio_frame.timestamp_s),
-        )
-
-        reward_function = RewardFunction()
-        gen_reward_signal = reward_function.gen(period_s=args.reward_period_s)
-
-        generators = [gen_sensors, gen_reward_signal]
-        tasks = [asyncio.create_task(generator.__anext__()) for generator in generators]
-
-        while True:
-            if len(tasks) == 0:
-                return
-
-            try:
-                # Wait for the first task to complete:
-                await next(asyncio.as_completed(tasks))
-
-                results = []
-                for idx in range(len(tasks)):
-                    if tasks[idx].done():
-                        results.append(tasks[idx].result())
-                        tasks[idx] = asyncio.create_task(generators[idx].__anext__())
-            except StopAsyncIteration:
-                # Drop any done and StopAsyncException-throwing tasks and associated generators, as they're done
-                idx_to_drop = [idx for idx in range(len(tasks)) if tasks[idx].done() and isinstance(tasks[idx].exception(), StopAsyncIteration)]
-                for idx in reversed(idx_to_drop):
-                    del tasks[idx]
-                    del generators[idx]
-
-                continue
-
-            for result in results:
-                if isinstance(result, VideoFrame):
-                    print(f"Got video frame - timestamp={result.timestamp_s}")
-                    await reward_function.push_video_frame(video_frame=result)
-                elif isinstance(result, AudioFrame):
-                    print(f"Got audio frame - timestamp={result.timestamp_s}")
-                    await reward_function.push_audio_frame(audio_frame=result)
-                elif isinstance(result, RewardSignal):
-                    print(result)
-                else:
-                    raise RuntimeError()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())

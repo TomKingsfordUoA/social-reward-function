@@ -5,7 +5,7 @@ import os
 import tempfile
 import time
 import wave
-from typing import Generator, Tuple, Any, Optional
+from typing import Generator, Any, Optional
 
 import librosa  # type: ignore
 import pyaudio  # type: ignore
@@ -115,7 +115,6 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
         period_samples = int(segment_duration_s * self._sample_rate * period_propn)
 
         cursor = 0
-        time_initial = time.time()
         while True:
             timestamp = (cursor + segment_duration_samples) / self._sample_rate
             yield AudioFrame(timestamp_s=timestamp, audio_data=self._audio_data[cursor:cursor+segment_duration_samples], sample_rate=self._sample_rate)

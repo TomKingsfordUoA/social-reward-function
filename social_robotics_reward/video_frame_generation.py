@@ -1,12 +1,11 @@
 import abc
-import asyncio
 import dataclasses
 import os
-from typing import Generator, Any, Tuple, Optional
 import time
+from typing import Generator, Any, Optional
 
-from numpy.typing import ArrayLike
 import cv2  # type: ignore
+from numpy.typing import ArrayLike
 
 
 @dataclasses.dataclass
@@ -66,7 +65,6 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
     async def gen(self) -> Generator[VideoFrame, None, None]:
         cap = cv2.VideoCapture(self._file)  # noqa
         timestamp_s_prev: Optional[float] = None
-        time_initial = time.time()
         while cap.isOpened():
             ret, frame = cap.read()
             timestamp_s = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0  # noqa
