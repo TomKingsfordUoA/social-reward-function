@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 from typing import TypeVar, Generic, Callable, AsyncGenerator, List
 
@@ -44,4 +45,27 @@ async def interleave_fifo(*generators: AsyncGenerator[T, None]) -> AsyncGenerato
     Simply combined into an AsyncGenerator which yields the elements from the generators in the order they're yielded
     by the AsyncGenerators.
     """
-    raise NotImplementedError()  # TODO(TK): implement
+
+    remaining_generators = list(generators)
+    tasks = [asyncio.create_task(generator.__anext__()) for generator in remaining_generators]
+
+    while True:
+        if len(tasks) == 0:
+            return
+
+        try:
+            # Wait for the first task to complete:
+            await next(asyncio.as_completed(tasks))
+
+            results = []
+            for idx in range(len(tasks)):
+                if tasks[idx].done():
+                    yield tasks[idx].result()
+                    tasks[idx] = asyncio.create_task(generators[idx].__anext__())
+        except StopAsyncIteration:
+            # Drop any done and StopAsyncException-throwing tasks and associated generators, as they're done
+            idx_to_drop = [idx for idx in range(len(tasks)) if tasks[idx].done() and isinstance(tasks[idx].exception(), StopAsyncIteration)]
+            for idx in reversed(idx_to_drop):
+                del tasks[idx]
+                del remaining_generators[idx]
+            continue
