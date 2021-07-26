@@ -21,11 +21,8 @@ async def main():
     parser.add_argument('--reward_period_s', type=float, default=0.5)
     args = parser.parse_args()
 
-    is_running = True
-
     def signal_handler(signum: Any, frame: Any) -> None:
-        global is_running
-        is_running = False
+        raise KeyboardInterrupt()
 
     signal.signal(signal.SIGINT, signal_handler)
 
