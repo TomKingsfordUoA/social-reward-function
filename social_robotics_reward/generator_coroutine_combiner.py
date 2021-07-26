@@ -41,7 +41,7 @@ async def interleave_temporally(generators: List[GeneratorMeta[Any]]) -> AsyncGe
             del timestamps[releasable_element_idx]
 
 
-async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_first=False) -> AsyncGenerator[Any, None]:
+async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_first: bool = False) -> AsyncGenerator[Any, None]:
     """
     Simply combined into an AsyncGenerator which yields the elements from the generators in the order they're yielded
     by the AsyncGenerators.

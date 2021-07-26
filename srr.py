@@ -5,11 +5,11 @@ import asyncio
 import signal
 import sys
 import time
-from typing import Any, AsyncGenerator, Union, cast, Optional
+from typing import Any, AsyncGenerator, Union, cast, Optional, List
 
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.image import AxesImage
+import matplotlib  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.image import AxesImage  # type: ignore
 
 from social_robotics_reward.audio_frame_generation import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator
@@ -39,7 +39,7 @@ class PlotDrawer:
         self._time_begin = time.time()
         self._video_frame_counter = 0
         self._axes_image: Optional[AxesImage] = None
-        self._reward_signal = []
+        self._reward_signal: List[RewardSignal] = []
 
     def _sync_time(self, timestamp_target: float) -> None:
         time_wait = timestamp_target - (time.time() - self._time_begin)
@@ -82,9 +82,21 @@ class PlotDrawer:
         self._reward_signal = [elem for elem in self._reward_signal if reward_signal.timestamp_s - elem.timestamp_s <= self._reward_window_width]
 
         self._ax_reward.clear()
-        self._ax_reward.plot([elem.timestamp_s for elem in self._reward_signal], [elem.combined_reward for elem in self._reward_signal], color='#ff0000', label='combined')
-        self._ax_reward.plot([elem.timestamp_s for elem in self._reward_signal], [elem.audio_reward for elem in self._reward_signal], color='#007700', label='audio')
-        self._ax_reward.plot([elem.timestamp_s for elem in self._reward_signal], [elem.video_reward for elem in self._reward_signal], color='#000077', label='video')
+        self._ax_reward.plot(
+            [elem.timestamp_s for elem in self._reward_signal],
+            [elem.combined_reward for elem in self._reward_signal],
+            color='#ff0000',
+            label='combined')
+        self._ax_reward.plot(
+            [elem.timestamp_s for elem in self._reward_signal],
+            [elem.audio_reward for elem in self._reward_signal],
+            color='#007700',
+            label='audio')
+        self._ax_reward.plot(
+            [elem.timestamp_s for elem in self._reward_signal],
+            [elem.video_reward for elem in self._reward_signal],
+            color='#000077',
+            label='video')
 
         timestamp_max = max(reward_signal.timestamp_s, self._reward_window_width)
         self._ax_reward.set_xlim(left=timestamp_max - self._reward_window_width, right=timestamp_max)
