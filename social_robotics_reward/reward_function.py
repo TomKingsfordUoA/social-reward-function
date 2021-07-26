@@ -12,6 +12,7 @@ from emotion_recognition_using_speech.utils import get_best_estimators
 from residual_masking_network import RMN
 from social_robotics_reward.audio_frame_generation import AudioFrameGenerator, AudioFileFrameGenerator, \
     MicrophoneFrameGenerator, AudioFrame
+from social_robotics_reward.generator_coroutine_combiner import interleave_temporally, GeneratorMeta
 from social_robotics_reward.video_frame_generation import VideoFileFrameGenerator, VideoFrameGenerator, \
     WebcamFrameGenerator, VideoFrame
 
@@ -158,15 +159,15 @@ async def main():
     with _audio_frame_generator as audio_frame_generator, _video_frame_generator as video_frame_generator:
         gen_video_frames = video_frame_generator.gen()
         gen_audio_frames = audio_frame_generator.gen(segment_duration_s=args.audio_segment_duration_s, period_propn=args.audio_period_propn)
+        gen_sensors = interleave_temporally(
+            GeneratorMeta(generator=gen_video_frames, get_timestamp=lambda video_frame: video_frame.timestamp_s),
+            GeneratorMeta(generator=gen_audio_frames, get_timestamp=lambda audio_frame: audio_frame.timestamp_s),
+        )
 
         reward_function = RewardFunction()
         gen_reward_signal = reward_function.gen(period_s=args.reward_period_s)
 
-        generators = [
-            gen_video_frames,
-            gen_audio_frames,
-            gen_reward_signal,
-        ]
+        generators = [gen_sensors, gen_reward_signal]
         tasks = [asyncio.create_task(generator.__anext__()) for generator in generators]
 
         while True:

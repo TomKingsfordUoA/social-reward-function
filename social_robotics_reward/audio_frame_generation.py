@@ -118,11 +118,6 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
         time_initial = time.time()
         while True:
             timestamp = (cursor + segment_duration_samples) / self._sample_rate
-
-            # TODO(TK): this is necessary so video and audio produce at appropriate relative rates. Replace this with correct temporal mixing
-            #  of multiple generators producing timstamped frames
-            await asyncio.sleep(timestamp - (time.time() - time_initial))
-
             yield AudioFrame(timestamp_s=timestamp, audio_data=self._audio_data[cursor:cursor+segment_duration_samples], sample_rate=self._sample_rate)
             cursor += period_samples
             if cursor >= len(self._audio_data):

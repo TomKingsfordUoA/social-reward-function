@@ -74,10 +74,6 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             if ret:
                 # TODO(TK): Why do we get some timestamp_s=0 frames at the end?
                 if timestamp_s_prev is None or timestamp_s > timestamp_s_prev:
-                    # TODO(TK): this is necessary so video and audio produce at appropriate relative rates. Replace this with correct temporal mixing
-                    #  of multiple generators producing timstamped frames
-                    await asyncio.sleep(timestamp_s - (time.time() - time_initial))
-
                     yield VideoFrame(timestamp_s=timestamp_s, video_data=frame)
                 timestamp_s_prev = timestamp_s
             else:
