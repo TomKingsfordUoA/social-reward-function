@@ -9,5 +9,8 @@ flake8 social_robotics_reward *.py
 echo '=== Static Type Checking ==='
 mypy --strict social_robotics_reward *.py
 
-# echo '=== Testing ==='
+echo '=== Testing ==='
 pytest -v .
+
+echo '=== Checking Manifest ==='
+check-manifest -v

@@ -1,4 +1,4 @@
-from setuptools import setup  # type: ignore
+from setuptools import setup, find_packages  # type: ignore
 
 
 __version__ = '0.1.0'
@@ -11,12 +11,9 @@ setup(
     version=__version__,
     author='Tom Kingsford',
     author_email='tkin063@aucklanduni.ac.nz',
-    packages=[
-        'social_robotics_reward',
-        'emotion_recognition_using_speech',
-        'residual_masking_network',
-    ],
+    url='https://github.com/TomKingsfordUoA/social-robotics-reward',
+    packages=find_packages(),
     scripts=['social_robotics_reward/srr.py'],
-    package_data={'social_robotics_reward': ['py.typed']},
+    include_package_data=True,
     install_requires=requirements,
 )

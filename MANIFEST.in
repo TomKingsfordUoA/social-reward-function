@@ -1,0 +1,6 @@
+# added by check-manifest
+include *requirements.txt
+recursive-include emotion_recognition_using_speech *.h5
+recursive-include emotion_recognition_using_speech *.pickle
+recursive-include residual_masking_network *.json
+recursive-include social_robotics_reward *.typed
