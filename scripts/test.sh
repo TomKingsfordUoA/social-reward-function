@@ -14,3 +14,6 @@ pytest -v .
 
 echo '=== Checking Manifest ==='
 check-manifest -v
+
+echo '=== Checking setup.py ==='
+python setup.py check

@@ -15,7 +15,7 @@ from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrap
 from social_robotics_reward.viz import RewardSignalVisualizer
 
 
-async def main() -> None:
+async def main_async() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False)
     parser.add_argument('--viz_video_downsample_rate', type=int, default=1)
@@ -100,5 +100,9 @@ async def main() -> None:
         plot_drawer.sustain()
 
 
+def main() -> None:
+    asyncio.run(main_async())
+
+
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

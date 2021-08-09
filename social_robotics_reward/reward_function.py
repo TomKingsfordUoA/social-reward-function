@@ -126,7 +126,9 @@ class RewardFunction:
         while (self._is_running.value or
                not self._queue_video_frames.empty() or
                not self._queue_audio_frames.empty() or
+               len(buffer_video_frames) != 0 or
                len(emotions_video_frames) != 0 or
+               len(buffer_audio_frames) != 0 or
                len(emotions_audio_frames) != 0):
 
             expected_idx_reward_signal = floor((time.time() - wallclock_initial) / self._period_s)

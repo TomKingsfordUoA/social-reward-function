@@ -13,7 +13,9 @@ setup(
     author_email='tkin063@aucklanduni.ac.nz',
     url='https://github.com/TomKingsfordUoA/social-robotics-reward',
     packages=find_packages(),
-    scripts=['social_robotics_reward/srr.py'],
+    entry_points={
+        'console_scripts': ['srr=social_robotics_reward.srr:main']
+    },
     include_package_data=True,
     install_requires=requirements,
 )
