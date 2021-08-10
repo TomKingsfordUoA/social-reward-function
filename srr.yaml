@@ -14,4 +14,4 @@ reward_signal:
     surprise: 0.0
     neutral: 0.0
   period_s: 2.0
-  threshold_audio_power: 0.001
+  threshold_audio_power: 0.00001

@@ -15,7 +15,7 @@ For more information, please refer to **(insert citation)**
 
 To get started, run:
 
-    git clone git@github.com:TomKingsfordUoA/social-robotics-reward.git
+    git clone --recurse-submodules git@github.com:TomKingsfordUoA/social-robotics-reward.git
     cd social-robotics-reward
     pip install .
     srr.py -h
