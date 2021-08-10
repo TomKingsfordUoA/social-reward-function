@@ -163,7 +163,6 @@ class RewardFunction:
                 df_audio_emotions = pd.DataFrame(included_emotions_audio_frames)
 
                 # Calculate the combined reward:
-                # TODO(TK): move these to a parameters file
                 wt_audio = 1.0
                 wt_video = 1.0
                 s_audio_coefficients = pd.Series({

@@ -59,7 +59,6 @@ class VideoFrameGenerator(abc.ABC):
             pass
 
 
-# TODO(TK): optionally record the webcam video to file for posterity
 class WebcamFrameGenerator(VideoFrameGenerator):
     def _gen(self) -> None:
         cap = cv2.VideoCapture(0)  # noqa
