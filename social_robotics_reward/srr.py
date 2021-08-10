@@ -1,16 +1,30 @@
 import argparse
 import asyncio
+import dataclasses
 import signal
 import time
 from typing import Any, AsyncGenerator
 
-from social_robotics_reward.reward_function import RewardFunction, RewardSignal
+import yaml
+
+from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConstants
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator
 from social_robotics_reward.sensors.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
     VideoFileFrameGenerator
 from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrapper
 from social_robotics_reward.viz import RewardSignalVisualizer
+
+
+@dataclasses.dataclass(frozen=True)
+class Config:
+    reward_signal_constants: RewardSignalConstants
+
+    @staticmethod
+    def from_dict(d: dict) -> 'Config':
+        return Config(
+            reward_signal_constants=RewardSignalConstants.from_dict(d['reward_signal']),
+        )
 
 
 async def main_async() -> None:
@@ -22,12 +36,16 @@ async def main_async() -> None:
     parser.add_argument('--audio_segment_duration_s', type=float, default=2.0)
     parser.add_argument('--video_target_fps', type=int, default=0.5)
     parser.add_argument('--reward_period_s', type=float, default=2.0)
+    parser.add_argument('--config', type=str, default='srr.yaml')
     args = parser.parse_args()
 
     def signal_handler(signum: Any, frame: Any) -> None:
         raise KeyboardInterrupt()
 
     signal.signal(signal.SIGINT, signal_handler)
+
+    with open(args.config) as f_config:
+        config = Config.from_dict(yaml.load(f_config))
 
     if args.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
@@ -60,6 +78,7 @@ async def main_async() -> None:
 
         reward_function = RewardFunction(
             period_s=args.reward_period_s,
+            constants=config.reward_signal_constants,
         )
         gen_reward_signal: AsyncGenerator[RewardSignal, None] = reward_function.gen_async()
 

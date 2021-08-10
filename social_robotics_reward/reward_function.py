@@ -21,6 +21,69 @@ Timestamp = float
 
 
 @dataclasses.dataclass(frozen=True)
+class RewardSignalConstants:
+    wt_video_overall: float
+    wt_video_angry: float
+    wt_video_disgust: float
+    wt_video_fear: float
+    wt_video_happy: float
+    wt_video_sad: float
+    wt_video_surprise: float
+    wt_video_neutral: float
+    wt_audio_overall: float
+    wt_audio_happy: float
+    wt_audio_neutral: float
+    wt_audio_sad: float
+
+    @property
+    def s_video_coefficients(self) -> pd.Series:
+        return pd.Series({
+            'angry': self.wt_video_angry,
+            'disgust': self.wt_video_disgust,
+            'fear': self.wt_video_fear,
+            'happy': self.wt_video_happy,
+            'sad': self.wt_video_sad,
+            'surprise': self.wt_video_surprise,
+            'neutral': self.wt_video_neutral,
+        })
+
+    @property
+    def s_audio_coefficients(self) -> pd.Series:
+        return pd.Series({
+            'happy': self.wt_audio_happy,
+            'neutral': self.wt_audio_neutral,
+            'sad': self.wt_audio_sad,
+        })
+
+    @staticmethod
+    def from_dict(d: dict) -> 'RewardSignalConstants':
+        if set(d.keys()) != {'audio', 'video'}:
+            raise ValueError()
+        if set(d['audio'].keys()) != {'overall', 'happy', 'neutral', 'sad'}:
+            raise ValueError()
+        if set(d['video'].keys()) != {'overall', 'angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral'}:
+            raise ValueError()
+        for value in list(d['audio'].values()) + list(d['video'].values()):
+            if not isinstance(value, float):
+                raise ValueError()
+
+        return RewardSignalConstants(
+            wt_video_overall=d['video']['overall'],
+            wt_video_angry=d['video']['angry'],
+            wt_video_disgust=d['video']['disgust'],
+            wt_video_fear=d['video']['fear'],
+            wt_video_happy=d['video']['happy'],
+            wt_video_sad=d['video']['sad'],
+            wt_video_surprise=d['video']['surprise'],
+            wt_video_neutral=d['video']['neutral'],
+            wt_audio_overall=d['audio']['overall'],
+            wt_audio_happy=d['audio']['happy'],
+            wt_audio_neutral=d['audio']['neutral'],
+            wt_audio_sad=d['audio']['sad'],
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class RewardSignal:
     timestamp_s: float
     combined_reward: float
@@ -44,9 +107,11 @@ class RewardFunction:
     def __init__(
             self,
             period_s: float,
+            constants: RewardSignalConstants,
     ) -> None:
 
         self._period_s = period_s
+        self._constants = constants
 
         self._queue_video_frames: queue.Queue[VideoFrame] = multiprocessing.Queue()
         self._queue_audio_frames: queue.Queue[AudioFrame] = multiprocessing.Queue()
@@ -163,31 +228,15 @@ class RewardFunction:
                 df_audio_emotions = pd.DataFrame(included_emotions_audio_frames)
 
                 # Calculate the combined reward:
-                wt_audio = 1.0
-                wt_video = 1.0
-                s_audio_coefficients = pd.Series({
-                    'happy': 1.0,
-                    'neutral': 0.0,
-                    'sad': -1.0,
-                })
-                s_video_coefficients = pd.Series({
-                    'angry': -1.0,
-                    'disgust': -1.0,
-                    'fear': -1.0,
-                    'happy': 1.0,
-                    'sad': -1.0,
-                    'surprise': 0.0,
-                    'neutral': 0.0,
-                })
-                if not df_audio_emotions.empty and set(s_audio_coefficients.index) != set(df_audio_emotions.columns):
-                    raise ValueError(f"Unexpected audio emotions: got {df_audio_emotions.columns} expected {s_audio_coefficients.index}")
-                if not df_video_emotions.empty and set(s_video_coefficients.index) != set(df_video_emotions.columns):
-                    raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {s_video_coefficients.index}")
-                audio_reward = None if df_audio_emotions.empty else (s_audio_coefficients * df_audio_emotions).to_numpy().sum()
-                video_reward = None if df_video_emotions.empty else (s_video_coefficients * df_video_emotions).to_numpy().sum()
+                if not df_audio_emotions.empty and set(self._constants.s_audio_coefficients.index) != set(df_audio_emotions.columns):
+                    raise ValueError(f"Unexpected audio emotions: got {df_audio_emotions.columns} expected {self._constants.s_audio_coefficients.index}")
+                if not df_video_emotions.empty and set(self._constants.s_video_coefficients.index) != set(df_video_emotions.columns):
+                    raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {self._constants.s_video_coefficients.index}")
+                audio_reward = None if df_audio_emotions.empty else (self._constants.s_audio_coefficients * df_audio_emotions).to_numpy().sum()
+                video_reward = None if df_video_emotions.empty else (self._constants.s_video_coefficients * df_video_emotions).to_numpy().sum()
                 combined_reward = (
-                        wt_audio * (audio_reward if audio_reward is not None else 0.0) +
-                        wt_video * (video_reward if video_reward is not None else 0.0)
+                        self._constants.wt_audio_overall * (audio_reward if audio_reward is not None else 0.0) +
+                        self._constants.wt_video_overall * (video_reward if video_reward is not None else 0.0)
                 )
 
                 timestamp_last_reward_signal += self._period_s
