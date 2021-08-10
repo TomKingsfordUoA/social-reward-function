@@ -18,7 +18,12 @@ To get started, run:
     git clone --recurse-submodules git@github.com:TomKingsfordUoA/social-robotics-reward.git
     cd social-robotics-reward
     pip install .
-    srr.py -h
+    srr -h
+
+At any time, to update submodules:
+
+
+    git submodule update --init --remote
 
 ## Citation
 

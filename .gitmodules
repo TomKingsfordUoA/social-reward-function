@@ -1,3 +1,6 @@
 [submodule "emotion_recognition_using_speech"]
 	path = emotion_recognition_using_speech
 	url = git@github.com:TomKingsfordUoA/emotion-recognition-using-speech.git
+[submodule "residual_masking_network"]
+	path = residual_masking_network
+	url = git@github.com:TomKingsfordUoA/ResidualMaskingNetwork.git
