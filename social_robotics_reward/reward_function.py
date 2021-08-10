@@ -56,7 +56,7 @@ class RewardSignalConstants:
         })
 
     @staticmethod
-    def from_dict(d: dict) -> 'RewardSignalConstants':
+    def from_dict(d: Dict[str, Dict[str, float]]) -> 'RewardSignalConstants':
         if set(d.keys()) != {'audio', 'video'}:
             raise ValueError()
         if set(d['audio'].keys()) != {'overall', 'happy', 'neutral', 'sad'}:

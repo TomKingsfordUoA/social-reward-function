@@ -3,7 +3,7 @@ import asyncio
 import dataclasses
 import signal
 import time
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict
 
 import yaml
 
@@ -21,7 +21,7 @@ class Config:
     reward_signal_constants: RewardSignalConstants
 
     @staticmethod
-    def from_dict(d: dict) -> 'Config':
+    def from_dict(d: Dict[str, Any]) -> 'Config':
         return Config(
             reward_signal_constants=RewardSignalConstants.from_dict(d['reward_signal']),
         )
