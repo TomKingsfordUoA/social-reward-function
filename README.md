@@ -1,4 +1,6 @@
-# Social Robotics Reward
+# :robot: Social Robotics Reward
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Introduction
 
@@ -20,10 +22,11 @@ To get started, run:
     pip install .
     srr -h
 
-At any time, to update submodules:
+To change branches and update submodules:
 
 
-    git submodule update --init --remote
+    git checkout <branch>
+    git submodule update --init
 
 ## Citation
 
