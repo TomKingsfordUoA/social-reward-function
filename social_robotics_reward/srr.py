@@ -6,6 +6,10 @@ import time
 from typing import Any, AsyncGenerator, Dict
 
 import yaml
+try:
+    from yaml import CLoader as YamlLoader
+except ImportError:
+    from yaml import Loader as YamlLoader
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConstants
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
@@ -45,7 +49,7 @@ async def main_async() -> None:
     signal.signal(signal.SIGINT, signal_handler)
 
     with open(args.config) as f_config:
-        config = Config.from_dict(yaml.load(f_config))
+        config = Config.from_dict(yaml.load(f_config, Loader=YamlLoader))
 
     if args.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
