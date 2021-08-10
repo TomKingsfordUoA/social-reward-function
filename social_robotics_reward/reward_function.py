@@ -5,8 +5,9 @@ import multiprocessing
 import queue
 import time
 from math import floor
-from typing import Optional, cast, AsyncGenerator, Generator, Dict, Tuple, List
+from typing import Optional, cast, AsyncGenerator, Generator, Dict, Tuple, List, Any
 
+import numpy as np
 import pandas as pd  # type: ignore
 
 from emotion_recognition_using_speech.emotion_recognition import EmotionRecognizer
@@ -15,7 +16,6 @@ from residual_masking_network import RMN
 from social_robotics_reward.sensors.audio import AudioFrame
 from social_robotics_reward.sensors.video import VideoFrame
 from social_robotics_reward.util import CodeBlockTimer
-
 
 Timestamp = float
 
@@ -34,6 +34,8 @@ class RewardSignalConstants:
     wt_audio_happy: float
     wt_audio_neutral: float
     wt_audio_sad: float
+    period_s: float
+    threshold_audio_power: float
 
     @property
     def s_video_coefficients(self) -> pd.Series:
@@ -56,30 +58,41 @@ class RewardSignalConstants:
         })
 
     @staticmethod
-    def from_dict(d: Dict[str, Dict[str, float]]) -> 'RewardSignalConstants':
-        if set(d.keys()) != {'audio', 'video'}:
+    def from_dict(d: Dict[str, Any]) -> 'RewardSignalConstants':
+        key_audio_weights = 'audio_weights'
+        key_video_weights = 'video_weights'
+        key_period = 'period_s'
+        key_threshold_audio_power = 'threshold_audio_power'
+
+        if set(d.keys()) != {key_audio_weights, key_video_weights, key_period, key_threshold_audio_power}:
             raise ValueError()
-        if set(d['audio'].keys()) != {'overall', 'happy', 'neutral', 'sad'}:
+        if set(d[key_audio_weights].keys()) != {'overall', 'happy', 'neutral', 'sad'}:
             raise ValueError()
-        if set(d['video'].keys()) != {'overall', 'angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral'}:
+        if set(d['video_weights'].keys()) != {'overall', 'angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral'}:
             raise ValueError()
-        for value in list(d['audio'].values()) + list(d['video'].values()):
+        for value in list(d[key_audio_weights].values()) + list(d['video_weights'].values()):
             if not isinstance(value, float):
                 raise ValueError()
+        if not isinstance(d[key_period], float):
+            raise ValueError()
+        if not isinstance(d[key_threshold_audio_power], float):
+            raise ValueError()
 
         return RewardSignalConstants(
-            wt_video_overall=d['video']['overall'],
-            wt_video_angry=d['video']['angry'],
-            wt_video_disgust=d['video']['disgust'],
-            wt_video_fear=d['video']['fear'],
-            wt_video_happy=d['video']['happy'],
-            wt_video_sad=d['video']['sad'],
-            wt_video_surprise=d['video']['surprise'],
-            wt_video_neutral=d['video']['neutral'],
-            wt_audio_overall=d['audio']['overall'],
-            wt_audio_happy=d['audio']['happy'],
-            wt_audio_neutral=d['audio']['neutral'],
-            wt_audio_sad=d['audio']['sad'],
+            wt_video_overall=d[key_video_weights]['overall'],
+            wt_video_angry=d[key_video_weights]['angry'],
+            wt_video_disgust=d[key_video_weights]['disgust'],
+            wt_video_fear=d[key_video_weights]['fear'],
+            wt_video_happy=d[key_video_weights]['happy'],
+            wt_video_sad=d[key_video_weights]['sad'],
+            wt_video_surprise=d[key_video_weights]['surprise'],
+            wt_video_neutral=d[key_video_weights]['neutral'],
+            wt_audio_overall=d[key_audio_weights]['overall'],
+            wt_audio_happy=d[key_audio_weights]['happy'],
+            wt_audio_neutral=d[key_audio_weights]['neutral'],
+            wt_audio_sad=d[key_audio_weights]['sad'],
+            period_s=d[key_period],
+            threshold_audio_power=d[key_threshold_audio_power],
         )
 
 
@@ -104,13 +117,7 @@ class RewardSignal:
 
 
 class RewardFunction:
-    def __init__(
-            self,
-            period_s: float,
-            constants: RewardSignalConstants,
-    ) -> None:
-
-        self._period_s = period_s
+    def __init__(self, constants: RewardSignalConstants) -> None:
         self._constants = constants
 
         self._queue_video_frames: queue.Queue[VideoFrame] = multiprocessing.Queue()
@@ -196,7 +203,7 @@ class RewardFunction:
                len(buffer_audio_frames) != 0 or
                len(emotions_audio_frames) != 0):
 
-            expected_idx_reward_signal = floor((time.time() - wallclock_initial) / self._period_s)
+            expected_idx_reward_signal = floor((time.time() - wallclock_initial) / self._constants.period_s)
 
             # Do we need to skip a reward period?
             if expected_idx_reward_signal - idx_reward_signal > 1:
@@ -209,19 +216,19 @@ class RewardFunction:
 
                 included_emotions_video_frames = [
                     predicted_emotions for timestamp_s, predicted_emotions in emotions_video_frames
-                    if timestamp_s <= timestamp_last_reward_signal + self._period_s
+                    if timestamp_s <= timestamp_last_reward_signal + self._constants.period_s
                 ]
                 emotions_video_frames = [
                     (timestamp_s, predicted_emotions) for timestamp_s, predicted_emotions in emotions_video_frames
-                    if timestamp_s > timestamp_last_reward_signal + self._period_s
+                    if timestamp_s > timestamp_last_reward_signal + self._constants.period_s
                 ]
                 included_emotions_audio_frames = [
                     predicted_emotions for timestamp_s, predicted_emotions in emotions_audio_frames
-                    if timestamp_s <= timestamp_last_reward_signal + self._period_s
+                    if timestamp_s <= timestamp_last_reward_signal + self._constants.period_s
                 ]
                 emotions_audio_frames = [
                     (timestamp_s, predicted_emotions) for timestamp_s, predicted_emotions in emotions_audio_frames
-                    if timestamp_s > timestamp_last_reward_signal + self._period_s
+                    if timestamp_s > timestamp_last_reward_signal + self._constants.period_s
                 ]
 
                 df_video_emotions = pd.DataFrame(included_emotions_video_frames)
@@ -239,7 +246,7 @@ class RewardFunction:
                         self._constants.wt_video_overall * (video_reward if video_reward is not None else 0.0)
                 )
 
-                timestamp_last_reward_signal += self._period_s
+                timestamp_last_reward_signal += self._constants.period_s
 
                 self._queue_reward_signal.put(RewardSignal(
                     timestamp_s=timestamp_last_reward_signal,
@@ -267,6 +274,8 @@ class RewardFunction:
                 print(f'Video prediction took {timer.timedelta} '
                       f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
             buffer_video_frames.clear()
+
+            buffer_audio_frames = [frame for frame in buffer_audio_frames if np.mean(np.power(frame.audio_data, 2)) >= self._constants.threshold_audio_power]
             with CodeBlockTimer() as timer:
                 emotions_audio_frames += [
                     (frame.timestamp_s, _audio_classifier.predict_proba(audio_data=frame.audio_data, sample_rate=frame.sample_rate))

@@ -1,10 +1,10 @@
 reward_signal:
-  audio:
+  audio_weights:
     overall: 0.5
     happy: 1.0
     neutral: 0.0
     sad: -1.0
-  video:
+  video_weights:
     overall: 0.5
     angry: -1.0
     disgust: -1.0
@@ -13,3 +13,5 @@ reward_signal:
     sad: -1.0
     surprise: 0.0
     neutral: 0.0
+  period_s: 2.0
+  threshold_audio_power: 0.001

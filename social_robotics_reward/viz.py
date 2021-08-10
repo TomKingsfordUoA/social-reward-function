@@ -1,23 +1,23 @@
 import asyncio
+import dataclasses
 import sys
 import time
 from typing import Optional, List, Set
 
 import matplotlib  # type: ignore
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
-import numpy as np
 
-from social_robotics_reward.sensors.audio import AudioFrame
 from social_robotics_reward.reward_function import RewardSignal
+from social_robotics_reward.sensors.audio import AudioFrame
 from social_robotics_reward.sensors.video import VideoFrame
 
 
 class RewardSignalVisualizer:
-    def __init__(self, reward_window_width: float, video_downsample_rate: Optional[int], reward_pd_s: float) -> None:
+    def __init__(self, reward_window_width: float, video_downsample_rate: Optional[int]) -> None:
         self._reward_window_width = reward_window_width
         self._video_downsample_rate = video_downsample_rate
-        self._reward_pd_s = reward_pd_s
 
         # Ensure frames are maximized:
         if matplotlib.get_backend() == 'TkAgg':
@@ -38,6 +38,7 @@ class RewardSignalVisualizer:
         self._reward_signal: List[RewardSignal] = []
         self._previously_observed_video_emotions: Set[str] = set()
         self._previously_observed_audio_emotions: Set[str] = set()
+        self._max_observed_audio_power = 5e-3
 
     async def _sync_time(self, timestamp_target: float, label: str) -> Optional[float]:
         """
@@ -86,7 +87,18 @@ class RewardSignalVisualizer:
         Draw the latest AudioFrame
         """
 
-        pass  # TODO(TK): implement
+        power = np.power(audio_frame.audio_data, 2)
+        t = np.linspace(start=0.0, stop=len(power) / audio_frame.sample_rate, num=len(power))
+        max_power = float(np.max(power))  # type: ignore
+        self._max_observed_audio_power = np.maximum(self._max_observed_audio_power, max_power)
+
+        self._ax_audio.clear()
+        self._ax_audio.plot(t, power)
+        self._ax_audio.set_ylim(bottom=0, top=self._max_observed_audio_power)
+        self._ax_audio.set_ylabel('power')
+        self._ax_audio.set_xlabel('time')
+
+        self._draw()
 
     async def draw_reward_signal(self, reward_signal: RewardSignal) -> None:
         """

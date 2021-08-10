@@ -30,12 +30,12 @@ class Config:
 async def main_async() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False)
+    # TODO(TK): move most of these to config file
     parser.add_argument('--viz_video_downsample_rate', type=int, default=1)
     parser.add_argument('--viz_reward_window_width', type=float, default=10.0)
     parser.add_argument('--audio_period_propn', type=float, default=0.5)
     parser.add_argument('--audio_segment_duration_s', type=float, default=2.0)
     parser.add_argument('--video_target_fps', type=int, default=0.5)
-    parser.add_argument('--reward_period_s', type=float, default=2.0)
     parser.add_argument('--config', type=str, default='srr.yaml')
     args = parser.parse_args()
 
@@ -73,13 +73,9 @@ async def main_async() -> None:
         plot_drawer = RewardSignalVisualizer(
             reward_window_width=args.viz_reward_window_width,
             video_downsample_rate=args.viz_video_downsample_rate,
-            reward_pd_s=args.reward_period_s,
         )
 
-        reward_function = RewardFunction(
-            period_s=args.reward_period_s,
-            constants=config.reward_signal_constants,
-        )
+        reward_function = RewardFunction(config.reward_signal_constants)
         gen_reward_signal: AsyncGenerator[RewardSignal, None] = reward_function.gen_async()
 
         # Interleave and stop when gen_sensors finishes (as gen_reward_signal will go forever):
