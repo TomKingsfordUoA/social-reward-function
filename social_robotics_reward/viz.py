@@ -87,7 +87,7 @@ class RewardSignalVisualizer:
         """
 
         power = np.power(audio_frame.audio_data, 2)
-        t = np.linspace(start=0.0, stop=len(power) / audio_frame.sample_rate, num=len(power))
+        t = np.linspace(start=audio_frame.timestamp_s - len(power) / audio_frame.sample_rate, stop=audio_frame.timestamp_s, num=len(power))
         max_power = float(np.max(power))  # type: ignore
         self._max_observed_audio_power = np.maximum(self._max_observed_audio_power, max_power)
 
