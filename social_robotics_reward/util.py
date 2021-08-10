@@ -1,38 +1,10 @@
 import asyncio
-import dataclasses
 import time
 from asyncio import Task
 from datetime import timedelta
-from typing import TypeVar, Generic, Callable, AsyncGenerator, List, Any, Optional, cast, Generator, Awaitable
+from typing import TypeVar, Callable, AsyncGenerator, List, Any, Optional, cast, Awaitable
 
 T = TypeVar('T')
-Timestamp = float
-
-
-@dataclasses.dataclass(frozen=True)
-class GeneratorMeta(Generic[T]):
-    generator: AsyncGenerator[T, None]
-    get_timestamp: Callable[[T], Timestamp]
-
-
-def argmin(lst: List[T], key: Optional[Callable[[T], float]] = None) -> Optional[int]:
-    if len(lst) == 0:
-        return None
-    smallest_elem = None
-    smallest_idx = None
-    for idx, elem in enumerate(lst):
-        if smallest_idx is None:
-            smallest_idx = idx
-            smallest_elem = elem
-        else:
-            if key is not None:
-                comparable_elem = key(elem)
-            else:
-                comparable_elem = elem
-            if comparable_elem < smallest_elem:
-                smallest_idx = idx
-                smallest_elem = comparable_elem
-    return smallest_idx
 
 
 async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_first: bool = False) -> AsyncGenerator[Any, None]:
@@ -75,16 +47,6 @@ async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_f
                     raise exc
                 tasks[idx] = None
             continue
-
-
-def gen_callback_wrapper(
-        gen: Generator[T, None, None],
-        callback: Callable[[], None],
-) -> Generator[T, None, None]:
-
-    for elem in gen:
-        yield elem
-    callback()
 
 
 async def async_gen_callback_wrapper(
