@@ -12,7 +12,7 @@ import pandas as pd  # type: ignore
 
 from emotion_recognition_using_speech.emotion_recognition import EmotionRecognizer
 from emotion_recognition_using_speech.utils import get_best_estimators
-from residual_masking_network.rmn import RMN  # type: ignore
+from residual_masking_network.rmn import RMN
 from social_robotics_reward.sensors.audio import AudioFrame
 from social_robotics_reward.sensors.video import VideoFrame
 from social_robotics_reward.util import CodeBlockTimer
@@ -138,7 +138,7 @@ class RewardFunction:
 
     @staticmethod
     def _load_video_classifier() -> RMN:
-        return RMN()
+        return RMN()  # type: ignore
 
     def stop(self) -> None:
         print("stopped")

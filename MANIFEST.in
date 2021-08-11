@@ -1,6 +1,15 @@
 # added by check-manifest
-include *requirements.txt
-recursive-include emotion_recognition_using_speech *.h5
-recursive-include emotion_recognition_using_speech *.pickle
+recursive-include . *requirements.txt
+recursive-include . */README.md
+recursive-include . */py.typed
+recursive-include . *.h5
+recursive-include . *.pickle
+recursive-include . *.npy
+recursive-include . *.sh
 recursive-include residual_masking_network *.json
-recursive-include social_robotics_reward *.typed
+recursive-include residual_masking_network *.yml
+recursive-include residual_masking_network *.cfg
+recursive-include residual_masking_network *.in
+recursive-include residual_masking_network *.py
+recursive-include residual_masking_network *.toml
+recursive-include residual_masking_network *.yaml

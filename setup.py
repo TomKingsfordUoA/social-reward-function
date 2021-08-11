@@ -6,6 +6,8 @@ __version__ = '0.2.0'
 with open('requirements.txt') as f_requirements:
     requirements = f_requirements.read().splitlines()
 
+print(find_packages())
+
 setup(
     name='social-robotics-reward',
     version=__version__,
