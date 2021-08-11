@@ -7,6 +7,7 @@ import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
+import cv2
 
 from social_robotics_reward.reward_function import RewardSignal
 from social_robotics_reward.sensors.audio import AudioFrame
@@ -74,10 +75,11 @@ class RewardSignalVisualizer:
         if falling_behind_s is not None and falling_behind_s >= 3.0:
             return
 
+        video_data_rgb = cv2.cvtColor(video_frame.video_data, cv2.COLOR_BGR2RGB)
         if self._axes_image is None:
-            self._axes_image = self._ax_image.imshow(video_frame.video_data)
+            self._axes_image = self._ax_image.imshow(video_data_rgb)
         else:
-            self._axes_image.set_data(video_frame.video_data)
+            self._axes_image.set_data(video_data_rgb)
 
         self._draw()
 
