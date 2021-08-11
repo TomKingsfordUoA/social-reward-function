@@ -1,4 +1,5 @@
 import asyncio
+import math
 import sys
 import time
 from typing import Optional, List, Set
@@ -39,6 +40,8 @@ class RewardSignalVisualizer:
         self._previously_observed_video_emotions: Set[str] = set()
         self._previously_observed_audio_emotions: Set[str] = set()
         self._max_observed_audio_power = 5e-3
+        self._max_observed_reward = 1.0
+        self._min_observed_reward = -1.0
 
     async def _sync_time(self, timestamp_target: float, label: str) -> Optional[float]:
         """
@@ -139,8 +142,21 @@ class RewardSignalVisualizer:
             label='video')
 
         timestamp_max = max(reward_signal.timestamp_s, self._reward_window_width)
+        self._max_observed_reward = max(
+            self._max_observed_reward,
+            np.max(reward_signal.combined_reward),
+            np.max(reward_signal.audio_reward) if reward_signal.audio_reward is not None else -math.inf,
+            np.max(reward_signal.video_reward) if reward_signal.video_reward is not None else -math.inf,
+        )
+        self._min_observed_reward = min(elem for elem in [
+            self._min_observed_reward,
+            np.min(reward_signal.combined_reward),
+            np.min(reward_signal.audio_reward) if reward_signal.audio_reward is not None else math.inf,
+            np.min(reward_signal.video_reward) if reward_signal.video_reward is not None else math.inf,
+        ] if elem is not None)
+
         self._ax_reward.set_xlim(left=timestamp_max - self._reward_window_width, right=time.time() - self._time_begin)
-        self._ax_reward.set_ylim(bottom=-2.0, top=2.0)
+        self._ax_reward.set_ylim(bottom=self._min_observed_reward, top=self._max_observed_reward)
         self._ax_reward.set_title('Reward')
         self._ax_reward.set_ylabel('reward')
         self._ax_reward.set_xlabel('time')
