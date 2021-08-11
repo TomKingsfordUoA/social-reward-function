@@ -7,7 +7,7 @@ import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
-import cv2
+import cv2  # type: ignore
 
 from social_robotics_reward.reward_function import RewardSignal
 from social_robotics_reward.sensors.audio import AudioFrame
