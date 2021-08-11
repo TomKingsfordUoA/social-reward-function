@@ -13,6 +13,9 @@ This reward function may then be used for one or both of:
 
 For more information, please refer to **(insert citation)**
 
+![screenshot](screenshot.png)
+<div style="text-align: right"><i>video credit: https://www.youtube.com/watch?v=wUZxSf_P2r0</i></div>
+
 ## Getting Started
 
 To get started, run:
