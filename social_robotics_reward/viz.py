@@ -4,15 +4,13 @@ import sys
 import time
 from typing import Optional, List, Set
 
+import cv2  # type: ignore
 import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
-import cv2  # type: ignore
 
 from social_robotics_reward.reward_function import RewardSignal
-from social_robotics_reward.sensors.audio import AudioFrame
-from social_robotics_reward.sensors.video import VideoFrame
 
 
 class RewardSignalVisualizer:
@@ -25,10 +23,8 @@ class RewardSignalVisualizer:
             mng = plt.get_current_fig_manager()
             mng.resize(*mng.window.maxsize())
 
-        self._ax_image = plt.subplot2grid((3, 2), (0, 0), rowspan=1, colspan=1)
-        self._ax_audio = plt.subplot2grid((3, 2), (0, 1), rowspan=1, colspan=1)
-        self._ax_reward = plt.subplot2grid((3, 2), (1, 0), rowspan=1, colspan=2)
-        self._ax_emotions = plt.subplot2grid((3, 2), (2, 0), rowspan=1, colspan=2)
+        self._ax_reward = plt.subplot2grid((2, 2), (0, 0), rowspan=1, colspan=2)
+        self._ax_emotions = plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=2)
 
         plt.show(block=False)
         plt.gcf().canvas.flush_events()
@@ -64,47 +60,10 @@ class RewardSignalVisualizer:
         plt.show(block=False)
         plt.gcf().canvas.flush_events()
 
-    async def draw_video_frame(self, video_frame: VideoFrame) -> None:
-        """
-        Draw the latest VideoFrame
-        """
-
-        self._video_frame_counter += 1
-        if self._video_downsample_rate is not None:
-            if self._video_frame_counter % self._video_downsample_rate != 0:
-                return
-
-        falling_behind_s = await self._sync_time(timestamp_target=video_frame.timestamp_s, label='video')
-        if falling_behind_s is not None and falling_behind_s >= 3.0:
-            return
-
-        video_data_rgb = cv2.cvtColor(video_frame.video_data, cv2.COLOR_BGR2RGB)
-        if self._axes_image is None:
-            self._axes_image = self._ax_image.imshow(video_data_rgb)
-        else:
-            self._axes_image.set_data(video_data_rgb)
-
-        self._draw()
-
-    async def draw_audio_frame(self, audio_frame: AudioFrame) -> None:
-        """
-        Draw the latest AudioFrame
-        """
-
-        power = np.power(audio_frame.audio_data, 2)
-        t = np.linspace(start=audio_frame.timestamp_s - len(power) / audio_frame.sample_rate, stop=audio_frame.timestamp_s, num=len(power))
-        max_power = float(np.max(power))  # type: ignore
-        self._max_observed_audio_power = np.maximum(self._max_observed_audio_power, max_power)
-
-        self._ax_audio.clear()
-        self._ax_audio.plot(t, power)
-        self._ax_audio.set_ylim(bottom=0, top=self._max_observed_audio_power)
-        self._ax_audio.set_ylabel('power')
-        self._ax_audio.set_xlabel('time')
-
-        self._draw()
-
-    async def draw_reward_signal(self, reward_signal: RewardSignal) -> None:
+    async def draw_reward_signal(
+            self,
+            reward_signal: RewardSignal,
+    ) -> None:
         """
         Append and draw the latest RewardSignal
         """

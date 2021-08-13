@@ -3,7 +3,7 @@ import asyncio
 import dataclasses
 import signal
 import time
-from typing import Any, AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict, Optional
 
 import yaml
 
@@ -94,14 +94,12 @@ async def main_async() -> None:
                     print(f"video_frames:audio_frames={cnt_video_frames / cnt_audio_frames}")  # useful for debugging lagging generators
                 print(f"video fps={cnt_video_frames/(time.time() - time_begin)}")
                 reward_function.push_video_frame(video_frame=result)
-                await plot_drawer.draw_video_frame(result)
             elif isinstance(result, AudioFrame):
                 cnt_audio_frames += 1
                 print(f"Got audio frame - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")
                 if cnt_audio_frames != 0:
                     print(f"video_frames:audio_frames={cnt_video_frames / cnt_audio_frames}")  # useful for debugging lagging generators
                 reward_function.push_audio_frame(audio_frame=result)
-                await plot_drawer.draw_audio_frame(result)
             elif isinstance(result, RewardSignal):
                 print(f"Got reward signal - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")
                 print(result)
