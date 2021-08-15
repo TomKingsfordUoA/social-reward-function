@@ -154,11 +154,19 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
         period_samples = int(self._segment_duration_s * self._sample_rate * self._period_propn)
 
         cursor = 0
+        wallclock_begin = time.time()
         while True:
-            timestamp = cursor / self._sample_rate
+            timestamp_s = cursor / self._sample_rate
+
+            wallclock_elapsed = time.time() - wallclock_begin
+            audio_elapsed = timestamp_s
+            wait_time = audio_elapsed - wallclock_elapsed
+            if wait_time > 0:
+                time.sleep(wait_time)
+
             self._queue.put(
                 AudioFrame(
-                    timestamp_s=timestamp,
+                    timestamp_s=timestamp_s,
                     audio_data=self._audio_data[cursor:cursor+segment_duration_samples],
                     sample_rate=self._sample_rate,
                 )

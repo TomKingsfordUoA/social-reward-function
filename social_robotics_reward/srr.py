@@ -5,6 +5,7 @@ import signal
 import time
 from typing import Any, AsyncGenerator, Dict, Optional
 
+import cv2
 import yaml
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConstants
@@ -94,6 +95,13 @@ async def main_async() -> None:
                     print(f"video_frames:audio_frames={cnt_video_frames / cnt_audio_frames}")  # useful for debugging lagging generators
                 print(f"video fps={cnt_video_frames/(time.time() - time_begin)}")
                 reward_function.push_video_frame(video_frame=result)
+
+                # Display image frame:
+                displayable_image = result.video_data.copy()
+                cv2.putText(displayable_image, f"{result.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.imshow('video', displayable_image)
+                cv2.waitKey(1)
+
             elif isinstance(result, AudioFrame):
                 cnt_audio_frames += 1
                 print(f"Got audio frame - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")

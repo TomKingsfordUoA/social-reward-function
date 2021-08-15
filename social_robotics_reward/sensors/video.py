@@ -4,9 +4,11 @@ import dataclasses
 import multiprocessing
 import os
 import queue
+import time
 from typing import Any, Optional, AsyncGenerator, Generator
 
 import cv2  # type: ignore
+from ffpyplayer.player import MediaPlayer
 from numpy.typing import ArrayLike
 
 
@@ -85,28 +87,43 @@ class WebcamFrameGenerator(VideoFrameGenerator):
 
 
 class VideoFileFrameGenerator(VideoFrameGenerator):
-    def __init__(self, file: str, target_fps: float) -> None:
+    def __init__(self, file: str, target_fps: float, play_audio: bool = True) -> None:
         super().__init__(target_fps=target_fps)
         self._file = file
+        self._play_audio = play_audio
 
         if not os.path.exists(file):
             raise FileNotFoundError(file)
 
     def _gen(self) -> None:
+        if self._play_audio:
+            # we need to assign to a variable, even if unused, to prevent MediaPlayer from being GC'd
+            audio_player = MediaPlayer(self._file)  # noqa
         cap = cv2.VideoCapture(self._file)  # noqa
         timestamp_target: Optional[float] = None
         if not cap.isOpened():
             raise RuntimeError("Failed to open video file!")
+        wallclock_begin = time.time()
+        timestamp_begin: Optional[float] = None
         while True:
             ret, frame = cap.read()
             timestamp_s = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0  # noqa
+            if timestamp_begin is None:
+                timestamp_begin = timestamp_s
+            assert timestamp_begin == 0.0  # we can handle the case it isn't, but do expect it to be
 
             if ret:
                 # TODO(TK): Why do we get some timestamp_s=0 frames at the end?
                 if timestamp_target is None or timestamp_s >= timestamp_target:
-                    self._queue.put(VideoFrame(timestamp_s=timestamp_s, video_data=frame))
+                    timestamp_target = timestamp_target + 1.0 / self._target_fps if timestamp_target is not None else timestamp_s
+                    self._queue.put(VideoFrame(timestamp_s=timestamp_s - timestamp_begin, video_data=frame))
                     self._semaphore.release()
-                    timestamp_target = timestamp_target + 1.0 / self._target_fps if timestamp_target is not None else timestamp_s + 1.0 / self._target_fps
+
+                    wallclock_elapsed = time.time() - wallclock_begin
+                    video_elapsed = timestamp_target - timestamp_begin
+                    wait_time = video_elapsed - wallclock_elapsed
+                    if wait_time > 0:
+                        time.sleep(wait_time)
 
             else:
                 cap.release()
