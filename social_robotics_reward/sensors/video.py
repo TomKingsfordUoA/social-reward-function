@@ -39,9 +39,8 @@ class VideoFrameGenerator(abc.ABC):
 
     async def gen_async_live(self) -> AsyncGenerator[VideoFrame, None]:
         try:
-            if self._proc.is_alive():
-                raise RuntimeError(f"{VideoFrameGenerator.__name__} already running")
-            self._proc.start()
+            if not self._proc.is_alive():
+                self._proc.start()
             while self._proc.is_alive() or not self._queue_live.empty():
                 if not self._semaphore_live.acquire(block=False):
                     await asyncio.sleep(0)
@@ -54,9 +53,8 @@ class VideoFrameGenerator(abc.ABC):
 
     async def gen_async_downsampled(self) -> AsyncGenerator[VideoFrame, None]:
         try:
-            if self._proc.is_alive():
-                raise RuntimeError(f"{VideoFrameGenerator.__name__} already running")
-            self._proc.start()
+            if not self._proc.is_alive():
+                self._proc.start()
             while self._proc.is_alive() or not self._queue_live.empty():
                 if not self._semaphore_downsampled.acquire(block=False):
                     await asyncio.sleep(0)

@@ -46,9 +46,8 @@ class AudioFrameGenerator(abc.ABC):
 
     async def gen_async(self) -> AsyncGenerator[AudioFrame, None]:
         try:
-            if self._proc.is_alive():
-                raise RuntimeError(f"{AudioFrameGenerator.__name__} already running")
-            self._proc.start()
+            if not self._proc.is_alive():
+                self._proc.start()
             while self._proc.is_alive() or not self._queue.empty():
                 if not self._semaphore.acquire(block=False):
                     await asyncio.sleep(0)
