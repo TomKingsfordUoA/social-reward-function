@@ -13,3 +13,4 @@ recursive-include residual_masking_network *.in
 recursive-include residual_masking_network *.py
 recursive-include residual_masking_network *.toml
 recursive-include residual_masking_network *.yaml
+prune venv
