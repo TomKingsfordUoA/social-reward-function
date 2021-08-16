@@ -77,7 +77,7 @@ async def main_async() -> None:
             _reward_function as reward_function, \
             _plot_drawer as plot_drawer:
 
-        gen_video_frames = video_frame_generator.gen_async()
+        gen_video_frames = video_frame_generator.gen_async_downsampled()
         gen_audio_frames = audio_frame_generator.gen_async()
         gen_reward_signal = reward_function.gen_async()
 

@@ -22,8 +22,10 @@ class VideoFrameGenerator(abc.ABC):
     def __init__(self, target_fps: float) -> None:
         self._target_fps = target_fps
 
-        self._queue: queue.Queue[VideoFrame] = multiprocessing.Queue()
-        self._semaphore = multiprocessing.Semaphore(value=0)
+        self._queue_live: queue.Queue[VideoFrame] = multiprocessing.Queue()
+        self._semaphore_live = multiprocessing.Semaphore(value=0)
+        self._queue_downsampled: queue.Queue[VideoFrame] = multiprocessing.Queue()
+        self._semaphore_downsampled = multiprocessing.Semaphore(value=0)
         self._proc = multiprocessing.Process(target=self._gen)
 
     def __enter__(self) -> 'VideoFrameGenerator':
@@ -35,26 +37,31 @@ class VideoFrameGenerator(abc.ABC):
     def _gen(self) -> None:
         raise NotImplementedError()
 
-    def gen(self) -> Generator[VideoFrame, None, None]:
-        if self._proc.is_alive():
-            raise RuntimeError(f"{VideoFrameGenerator.__name__} already running")
-        self._proc.start()
-        while self._proc.is_alive() or not self._queue.empty():
-            if not self._semaphore.acquire(timeout=1e-1):
-                continue
-            elem = self._queue.get()
-            yield elem
-
-    async def gen_async(self) -> AsyncGenerator[VideoFrame, None]:
+    async def gen_async_live(self) -> AsyncGenerator[VideoFrame, None]:
         try:
             if self._proc.is_alive():
                 raise RuntimeError(f"{VideoFrameGenerator.__name__} already running")
             self._proc.start()
-            while self._proc.is_alive() or not self._queue.empty():
-                if not self._semaphore.acquire(block=False):
+            while self._proc.is_alive() or not self._queue_live.empty():
+                if not self._semaphore_live.acquire(block=False):
                     await asyncio.sleep(0)
                     continue
-                elem = self._queue.get()
+                elem = self._queue_live.get()
+                yield elem
+            return
+        except asyncio.CancelledError:
+            pass
+
+    async def gen_async_downsampled(self) -> AsyncGenerator[VideoFrame, None]:
+        try:
+            if self._proc.is_alive():
+                raise RuntimeError(f"{VideoFrameGenerator.__name__} already running")
+            self._proc.start()
+            while self._proc.is_alive() or not self._queue_live.empty():
+                if not self._semaphore_downsampled.acquire(block=False):
+                    await asyncio.sleep(0)
+                    continue
+                elem = self._queue_downsampled.get()
                 yield elem
             return
         except asyncio.CancelledError:
@@ -77,10 +84,12 @@ class WebcamFrameGenerator(VideoFrameGenerator):
                 timestamp_target = timestamp
 
             if ret:
+                video_frame = VideoFrame(timestamp_s=timestamp - timestamp_initial, video_data=frame)
+                self._queue_live.put(video_frame)
                 if timestamp >= timestamp_target:
                     timestamp_target += 1.0 / self._target_fps
-                    self._queue.put(VideoFrame(timestamp_s=timestamp - timestamp_initial, video_data=frame))
-                    self._semaphore.release()
+                    self._queue_downsampled.put(video_frame)
+                self._semaphore.release()
             else:
                 cap.release()
                 return
@@ -113,14 +122,18 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             assert timestamp_begin == 0.0  # we can handle the case it isn't, but do expect it to be
 
             if ret:
+                video_frame = VideoFrame(timestamp_s=timestamp_s - timestamp_begin, video_data=frame)
+                self._queue_live.put(video_frame)
+                self._semaphore_live.release()
                 # TODO(TK): Why do we get some timestamp_s=0 frames at the end?
                 if timestamp_target is None or timestamp_s >= timestamp_target:
                     timestamp_target = timestamp_target + 1.0 / self._target_fps if timestamp_target is not None else timestamp_s
-                    self._queue.put(VideoFrame(timestamp_s=timestamp_s - timestamp_begin, video_data=frame))
-                    self._semaphore.release()
+                    self._queue_downsampled.put(video_frame)
+                    self._semaphore_downsampled.release()
 
+                if timestamp_target is not None:
                     wallclock_elapsed = time.time() - wallclock_begin
-                    video_elapsed = timestamp_target - timestamp_begin
+                    video_elapsed = timestamp_s - timestamp_begin
                     wait_time = video_elapsed - wallclock_elapsed
                     if wait_time > 0:
                         time.sleep(wait_time)
