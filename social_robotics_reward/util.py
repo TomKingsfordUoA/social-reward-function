@@ -1,22 +1,29 @@
 import asyncio
+import dataclasses
 import time
 from asyncio import Task
 from datetime import timedelta
-from typing import TypeVar, Callable, AsyncGenerator, List, Any, Optional, cast, Awaitable
+from typing import TypeVar, Callable, AsyncGenerator, List, Any, Optional, cast, Awaitable, Dict, Set, Tuple
 
 T = TypeVar('T')
 
 
-async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_first: bool = False) -> AsyncGenerator[Any, None]:
+@dataclasses.dataclass(frozen=True)
+class TaggedItem:
+    tags: Tuple[str, ...]
+    item: Any
+
+
+async def interleave_fifo(generators: Dict[str, AsyncGenerator[Any, None]], stop_at_first: bool = False) -> AsyncGenerator[Any, None]:
     """
     Simply combined into an AsyncGenerator which yields the elements from the generators in the order they're yielded
     by the AsyncGenerators.
     """
 
-    tasks: List[Optional[Task[Any]]] = [asyncio.create_task(generator.__anext__()) for generator in generators]
+    tasks: Dict[str, Optional[Task[Any]]] = {tag: asyncio.create_task(generator.__anext__()) for tag, generator in generators.items()}
 
     while True:
-        remaining_tasks = [task for task in tasks if task is not None]
+        remaining_tasks = [task for task in tasks.values() if task is not None]
 
         if (stop_at_first and (len(remaining_tasks) != len(generators))) or (not stop_at_first and (len(remaining_tasks) == 0)):
             for remaining_task in remaining_tasks:
@@ -34,18 +41,23 @@ async def interleave_fifo(generators: List[AsyncGenerator[Any, None]], stop_at_f
             # Wait for the first task to complete:
             await asyncio.wait(remaining_tasks, return_when=asyncio.FIRST_COMPLETED)
 
-            for idx, task in enumerate(tasks):
+            for tag, task in tasks.items():
                 if task is not None and task.done():
-                    yield task.result()
-                    tasks[idx] = asyncio.create_task(generators[idx].__anext__())
+                    result = task.result()
+                    if isinstance(result, TaggedItem):
+                        item = TaggedItem(tags=result.tags + (tag,), item=result.item)
+                    else:
+                        item = TaggedItem(tags=(tag,), item=result)
+                    yield item
+                    tasks[tag] = asyncio.create_task(generators[tag].__anext__())
         except StopAsyncIteration:
             # Drop any done and StopAsyncException-throwing tasks and associated generators, as they're done
-            idx_to_drop = [idx for idx, task in enumerate(tasks) if task is not None and task.done() and task.exception() is not None]
-            for idx in reversed(idx_to_drop):
-                exc = cast(Task[Any], tasks[idx]).exception()
+            tags_to_drop = [tags for tags, task in tasks.items() if task is not None and task.done() and task.exception() is not None]
+            for tags in tags_to_drop:
+                exc = cast(Task[Any], tasks[tags]).exception()
                 if exc is not None and not isinstance(exc, StopAsyncIteration):
                     raise exc
-                tasks[idx] = None
+                tasks[tags] = None
             continue
 
 

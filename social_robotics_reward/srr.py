@@ -82,40 +82,36 @@ async def main_async() -> None:
         gen_reward_signal = reward_function.gen_async()
 
         # Interleave and stop when gen_sensors finishes (as gen_reward_signal will go forever):
-        gen_sensors = interleave_fifo([gen_video_frames, gen_audio_frames], stop_at_first=False)
+        gen_sensors = interleave_fifo({'video': gen_video_frames, 'audio': gen_audio_frames}, stop_at_first=False)
         gen_sensors = async_gen_callback_wrapper(gen_sensors, callback_async=reward_function.stop_async())
-        gen_combined = interleave_fifo([gen_sensors, gen_reward_signal], stop_at_first=False)
+        gen_combined = interleave_fifo({'sensors': gen_sensors, 'reward': gen_reward_signal}, stop_at_first=False)
 
-        cnt_video_frames = 0.0
-        cnt_audio_frames = 0.0
         time_begin = time.time()
-        async for result in gen_combined:
-            if isinstance(result, VideoFrame):
-                cnt_video_frames += 1
-                print(f"Got video frame - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")
-                if cnt_audio_frames != 0:
-                    print(f"video_frames:audio_frames={cnt_video_frames / cnt_audio_frames}")  # useful for debugging lagging generators
-                print(f"video fps={cnt_video_frames/(time.time() - time_begin)}")
-                reward_function.push_video_frame(video_frame=result)
+        async for tagged_item in gen_combined:
+            if 'video' in tagged_item.tags:
+                assert isinstance(tagged_item.item, VideoFrame)
+                print(f"Got video frame - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                reward_function.push_video_frame(video_frame=tagged_item.item)
 
                 # Display image frame:
-                displayable_image = result.video_data.copy()
-                cv2.putText(displayable_image, f"{result.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow('video', displayable_image)
-                cv2.waitKey(1)
+                displayable_image = tagged_item.item.video_data.copy()
+                cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.imshow('Video (downsampled)', displayable_image)
+                cv2.waitKey(1)  # milliseconds
 
-            elif isinstance(result, AudioFrame):
-                cnt_audio_frames += 1
-                print(f"Got audio frame - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")
-                if cnt_audio_frames != 0:
-                    print(f"video_frames:audio_frames={cnt_video_frames / cnt_audio_frames}")  # useful for debugging lagging generators
-                reward_function.push_audio_frame(audio_frame=result)
-            elif isinstance(result, RewardSignal):
-                print(f"Got reward signal - timestamp={result.timestamp_s} (wallclock={time.time() - time_begin})")
-                print(result)
-                await plot_drawer.draw_reward_signal(result)
+            elif 'audio' in tagged_item.tags:
+                assert isinstance(tagged_item.item, AudioFrame)
+                print(f"Got audio frame - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                reward_function.push_audio_frame(audio_frame=tagged_item.item)
+
+            elif 'reward' in tagged_item.tags:
+                assert isinstance(tagged_item.item, RewardSignal)
+                print(f"Got reward signal - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                print(tagged_item.item)
+                await plot_drawer.draw_reward_signal(tagged_item.item)
+
             else:
-                raise RuntimeError(f"Unexpected type: {type(result)}")
+                raise RuntimeError(f"Unexpected type: {type(tagged_item)}")
 
         print("stopped")
         plot_drawer.sustain()
