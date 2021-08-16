@@ -2,7 +2,7 @@ import asyncio
 import math
 import sys
 import time
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Any
 
 import cv2  # type: ignore
 import matplotlib  # type: ignore
@@ -39,13 +39,17 @@ class RewardSignalVisualizer:
         self._max_observed_reward = 1.0
         self._min_observed_reward = -1.0
 
+    def __enter__(self) -> 'RewardSignalVisualizer':
+        self._time_begin = time.time()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        pass
+
     async def _sync_time(self, timestamp_target: float, label: str) -> Optional[float]:
         """
         :return: None if not falling behind, otherwise the positive number of seconds behind target.
         """
-
-        if self._time_begin is None:
-            self._time_begin = time.time()
 
         time_wait = timestamp_target - (time.time() - self._time_begin)
         if time_wait >= 0:
@@ -69,7 +73,8 @@ class RewardSignalVisualizer:
         """
 
         if self._time_begin is None:
-            self._time_begin = time.time()
+            raise ValueError(f"{RewardSignalVisualizer.draw_reward_signal.__name__} called outside context manager")
+
         await self._sync_time(timestamp_target=reward_signal.timestamp_s, label='reward signal')
 
         # Append the new reward signal and drop old data points:
@@ -165,4 +170,7 @@ class RewardSignalVisualizer:
         """
         Blocks and keeps the plot window open when data has finished
         """
+        if self._time_begin is None:
+            raise ValueError(f"{RewardSignalVisualizer.sustain.__name__} called outside context manager")
+
         plt.show()

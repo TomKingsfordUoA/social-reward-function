@@ -66,18 +66,20 @@ async def main_async() -> None:
         _video_frame_generator = WebcamFrameGenerator(
             target_fps=args.video_target_fps,
         )
+    _reward_function = RewardFunction(config.reward_signal_constants)
+    _plot_drawer = RewardSignalVisualizer(
+        reward_window_width=args.viz_reward_window_width,
+        video_downsample_rate=args.viz_video_downsample_rate,
+    )
 
-    with _audio_frame_generator as audio_frame_generator, _video_frame_generator as video_frame_generator:
+    with _audio_frame_generator as audio_frame_generator, \
+            _video_frame_generator as video_frame_generator, \
+            _reward_function as reward_function, \
+            _plot_drawer as plot_drawer:
+
         gen_video_frames = video_frame_generator.gen_async()
         gen_audio_frames = audio_frame_generator.gen_async()
-
-        plot_drawer = RewardSignalVisualizer(
-            reward_window_width=args.viz_reward_window_width,
-            video_downsample_rate=args.viz_video_downsample_rate,
-        )
-
-        reward_function = RewardFunction(config.reward_signal_constants)
-        gen_reward_signal: AsyncGenerator[RewardSignal, None] = reward_function.gen_async()
+        gen_reward_signal = reward_function.gen_async()
 
         # Interleave and stop when gen_sensors finishes (as gen_reward_signal will go forever):
         gen_sensors = interleave_fifo([gen_video_frames, gen_audio_frames], stop_at_first=False)

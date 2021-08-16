@@ -130,6 +130,12 @@ class RewardFunction:
         self._is_running = multiprocessing.Value(ctypes.c_bool)
         self._is_running.value = True
 
+    def __enter__(self) -> 'RewardFunction':
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        pass
+
     @staticmethod
     def _load_audio_classifier() -> EmotionRecognizer:
         estimators = get_best_estimators(classification=True)  # type: ignore
