@@ -5,10 +5,10 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Any, Optional, AsyncGenerator, Generator
+from typing import Any, Optional, AsyncGenerator
 
 import cv2  # type: ignore
-from ffpyplayer.player import MediaPlayer
+from ffpyplayer.player import MediaPlayer  # type: ignore
 from numpy.typing import ArrayLike
 
 
@@ -84,10 +84,11 @@ class WebcamFrameGenerator(VideoFrameGenerator):
             if ret:
                 video_frame = VideoFrame(timestamp_s=timestamp - timestamp_initial, video_data=frame)
                 self._queue_live.put(video_frame)
+                self._semaphore_live.release()
                 if timestamp >= timestamp_target:
                     timestamp_target += 1.0 / self._target_fps
                     self._queue_downsampled.put(video_frame)
-                self._semaphore.release()
+                    self._semaphore_downsampled.release()
             else:
                 cap.release()
                 return
@@ -139,10 +140,3 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             else:
                 cap.release()
                 return
-
-
-if __name__ == '__main__':
-    # with VideoFileFrameGenerator(file='samples/01-01-03-01-02-01-01_happy.mp4') as video_frame_generator:
-    with WebcamFrameGenerator(target_fps=25) as video_frame_generator:
-        for video_frame in video_frame_generator.gen():
-            print(video_frame)

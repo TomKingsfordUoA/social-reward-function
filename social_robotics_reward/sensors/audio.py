@@ -7,7 +7,7 @@ import queue
 import tempfile
 import time
 import wave
-from typing import Any, AsyncGenerator, Generator
+from typing import Any, AsyncGenerator
 
 import librosa  # type: ignore
 import pyaudio  # type: ignore
@@ -165,10 +165,3 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
             cursor += period_samples
             if cursor >= len(self._audio_data):
                 return
-
-
-if __name__ == '__main__':
-    # with AudioFileFrameGenerator(file='samples/01-01-03-01-02-01-01_happy.mp4', segment_duration_s=2.0, period_propn=0.5) as audio_frame_generator:
-    with MicrophoneFrameGenerator(segment_duration_s=2.0, period_propn=0.5) as audio_frame_generator:
-        for audio_frame in audio_frame_generator.gen():
-            print(audio_frame)

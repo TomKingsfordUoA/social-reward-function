@@ -3,10 +3,12 @@ import asyncio
 import dataclasses
 import signal
 import time
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, Dict, cast
 
-import cv2
+import cv2  # type: ignore
+import numpy as np
 import yaml
+from numpy.typing import ArrayLike
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
@@ -106,10 +108,11 @@ async def main_async() -> None:
         async for tagged_item in gen_combined:
             if _key_video_live in tagged_item.tags:
                 assert isinstance(tagged_item.item, VideoFrame)
-                # print(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
+                # print(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} "
+                #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
 
                 # Display image frame:
-                displayable_image = tagged_item.item.video_data.copy()
+                displayable_image = cast(ArrayLike, np.copy(tagged_item.item.video_data))  # type: ignore
                 cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (live)', displayable_image)
@@ -121,7 +124,7 @@ async def main_async() -> None:
                 reward_function.push_video_frame(video_frame=tagged_item.item)
 
                 # Display image frame:
-                displayable_image = tagged_item.item.video_data.copy()
+                displayable_image = cast(ArrayLike, np.copy(tagged_item.item.video_data))  # type: ignore
                 cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (downsampled)', displayable_image)
                 cv2.waitKey(1)  # milliseconds

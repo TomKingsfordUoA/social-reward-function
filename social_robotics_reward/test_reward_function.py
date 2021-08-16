@@ -23,6 +23,7 @@ def test_reward_function_constants_from_dict() -> None:
         },
         'period_s': 2.0,
         'threshold_audio_power': 0.01,
+        'threshold_latency_s': 5.0,
     }
     reward_signal_constants = RewardSignalConfig.from_dict(d_constants)
     reward_signal_constants_expected = RewardSignalConfig(
@@ -40,6 +41,7 @@ def test_reward_function_constants_from_dict() -> None:
         wt_video_neutral=0.0,
         period_s=2.0,
         threshold_audio_power=0.01,
+        threshold_latency_s=5.0,
     )
     assert reward_signal_constants == reward_signal_constants_expected
 
@@ -60,6 +62,7 @@ def test_reward_function_constants_series() -> None:
         wt_video_neutral=0.0,
         period_s=0.1,
         threshold_audio_power=0.001,
+        threshold_latency_s=5.0,
     )
     assert reward_signal_constants.s_audio_coefficients.equals(pd.Series({
         'happy': 1.0,

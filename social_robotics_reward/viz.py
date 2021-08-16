@@ -1,10 +1,8 @@
-import asyncio
 import math
 import sys
 import time
 from typing import Optional, List, Set, Any
 
-import cv2  # type: ignore
 import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
@@ -98,15 +96,15 @@ class RewardSignalVisualizer:
         timestamp_max = max(reward_signal.timestamp_s, self._reward_window_width)
         self._max_observed_reward = max(elem for elem in [
             self._max_observed_reward,
-            np.max(reward_signal.combined_reward),
-            np.max(reward_signal.audio_reward) if reward_signal.audio_reward is not None else -math.inf,
-            np.max(reward_signal.video_reward) if reward_signal.video_reward is not None else -math.inf,
+            np.max(reward_signal.combined_reward),  # type: ignore
+            np.max(reward_signal.audio_reward) if reward_signal.audio_reward is not None else -math.inf,  # type: ignore
+            np.max(reward_signal.video_reward) if reward_signal.video_reward is not None else -math.inf,  # type: ignore
         ] if elem is not None)
         self._min_observed_reward = min(elem for elem in [
             self._min_observed_reward,
-            np.min(reward_signal.combined_reward),
-            np.min(reward_signal.audio_reward) if reward_signal.audio_reward is not None else math.inf,
-            np.min(reward_signal.video_reward) if reward_signal.video_reward is not None else math.inf,
+            np.min(reward_signal.combined_reward),  # type: ignore
+            np.min(reward_signal.audio_reward) if reward_signal.audio_reward is not None else math.inf,  # type: ignore
+            np.min(reward_signal.video_reward) if reward_signal.video_reward is not None else math.inf,  # type: ignore
         ] if elem is not None)
 
         self._ax_reward.set_xlim(left=timestamp_max - self._reward_window_width, right=time.time() - self._time_begin)

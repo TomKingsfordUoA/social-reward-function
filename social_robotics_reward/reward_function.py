@@ -5,7 +5,7 @@ import multiprocessing
 import queue
 import sys
 import time
-from math import floor, ceil
+from math import ceil
 from typing import Optional, cast, AsyncGenerator, Generator, Dict, Tuple, List, Any
 
 import numpy as np
@@ -219,7 +219,9 @@ class RewardFunction:
             if lag > self._config.threshold_latency_s:
                 wallclock_pre_correction = wallclock_next
                 wallclock_next += ceil(lag / self._config.period_s) * self._config.period_s
-                print(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up [{wallclock_pre_correction - wallclock_initial:.2f}, {wallclock_next - wallclock_initial})", file=sys.stderr)
+                print(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up "
+                      f"[{wallclock_pre_correction - wallclock_initial:.2f}, {wallclock_next - wallclock_initial})",
+                      file=sys.stderr)
                 lag = now - wallclock_next
                 assert lag <= 0, lag  # sanity check - negative lag after correction
             assert lag <= self._config.threshold_latency_s, lag  # sanity check - lag never more than threshold
