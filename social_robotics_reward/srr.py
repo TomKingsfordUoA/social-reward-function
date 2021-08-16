@@ -8,7 +8,7 @@ from typing import Any, AsyncGenerator, Dict, Optional
 import cv2
 import yaml
 
-from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConstants
+from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator
 from social_robotics_reward.sensors.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
@@ -19,12 +19,12 @@ from social_robotics_reward.viz import RewardSignalVisualizer
 
 @dataclasses.dataclass(frozen=True)
 class Config:
-    reward_signal_constants: RewardSignalConstants
+    reward_signal_constants: RewardSignalConfig
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> 'Config':
         return Config(
-            reward_signal_constants=RewardSignalConstants.from_dict(d['reward_signal']),
+            reward_signal_constants=RewardSignalConfig.from_dict(d['reward_signal']),
         )
 
 
@@ -34,6 +34,7 @@ async def main_async() -> None:
     # TODO(TK): move most of these to config file
     parser.add_argument('--viz_video_downsample_rate', type=int, default=1)
     parser.add_argument('--viz_reward_window_width', type=float, default=30.0)
+    parser.add_argument('--viz_threshold_lag_s', type=float, default=10.0)
     parser.add_argument('--audio_period_propn', type=float, default=0.5)
     parser.add_argument('--audio_segment_duration_s', type=float, default=2.0)
     parser.add_argument('--video_target_fps', type=float, default=0.5)
@@ -70,6 +71,7 @@ async def main_async() -> None:
     _plot_drawer = RewardSignalVisualizer(
         reward_window_width=args.viz_reward_window_width,
         video_downsample_rate=args.viz_video_downsample_rate,
+        threshold_lag_s=args.viz_threshold_lag_s,
     )
 
     with _audio_frame_generator as audio_frame_generator, \

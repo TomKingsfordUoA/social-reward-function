@@ -13,5 +13,6 @@ reward_signal:
     sad: -1.0
     surprise: 0.0
     neutral: 0.0
-  period_s: 10.0
+  period_s: 5.0
   threshold_audio_power: 0.00001
+  threshold_latency_s: 5.0

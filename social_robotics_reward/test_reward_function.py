@@ -1,6 +1,6 @@
 import pandas as pd  # type: ignore
 
-from social_robotics_reward.reward_function import RewardSignalConstants
+from social_robotics_reward.reward_function import RewardSignalConfig
 
 
 def test_reward_function_constants_from_dict() -> None:
@@ -24,8 +24,8 @@ def test_reward_function_constants_from_dict() -> None:
         'period_s': 2.0,
         'threshold_audio_power': 0.01,
     }
-    reward_signal_constants = RewardSignalConstants.from_dict(d_constants)
-    reward_signal_constants_expected = RewardSignalConstants(
+    reward_signal_constants = RewardSignalConfig.from_dict(d_constants)
+    reward_signal_constants_expected = RewardSignalConfig(
         wt_audio_overall=0.5,
         wt_audio_happy=1.0,
         wt_audio_neutral=0.0,
@@ -45,7 +45,7 @@ def test_reward_function_constants_from_dict() -> None:
 
 
 def test_reward_function_constants_series() -> None:
-    reward_signal_constants = RewardSignalConstants(
+    reward_signal_constants = RewardSignalConfig(
         wt_audio_overall=0.5,
         wt_audio_happy=1.0,
         wt_audio_neutral=0.0,

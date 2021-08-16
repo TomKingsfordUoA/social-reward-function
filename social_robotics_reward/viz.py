@@ -14,9 +14,10 @@ from social_robotics_reward.reward_function import RewardSignal
 
 
 class RewardSignalVisualizer:
-    def __init__(self, reward_window_width: float, video_downsample_rate: Optional[int]) -> None:
+    def __init__(self, reward_window_width: float, video_downsample_rate: Optional[int], threshold_lag_s: float) -> None:
         self._reward_window_width = reward_window_width
         self._video_downsample_rate = video_downsample_rate
+        self._threshold_lag_s = threshold_lag_s
 
         # Ensure frames are maximized:
         if matplotlib.get_backend() == 'TkAgg':
@@ -46,19 +47,6 @@ class RewardSignalVisualizer:
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
-    async def _sync_time(self, timestamp_target: float, label: str) -> Optional[float]:
-        """
-        :return: None if not falling behind, otherwise the positive number of seconds behind target.
-        """
-
-        time_wait = timestamp_target - (time.time() - self._time_begin)
-        if time_wait >= 0:
-            await asyncio.sleep(time_wait)
-            return None
-        else:
-            print(f"{label} falling behind! {-time_wait}", file=sys.stderr)
-            return -time_wait
-
     def _draw(self) -> None:
         plt.gcf().canvas.flush_events()
         plt.show(block=False)
@@ -75,7 +63,9 @@ class RewardSignalVisualizer:
         if self._time_begin is None:
             raise ValueError(f"{RewardSignalVisualizer.draw_reward_signal.__name__} called outside context manager")
 
-        await self._sync_time(timestamp_target=reward_signal.timestamp_s, label='reward signal')
+        lag = time.time() - self._time_begin - reward_signal.timestamp_s
+        if lag > self._threshold_lag_s:
+            print(f"reward signal viz falling behind! lag={lag:.2f}", file=sys.stderr)
 
         # Append the new reward signal and drop old data points:
         self._reward_signal.append(reward_signal)
@@ -106,12 +96,12 @@ class RewardSignalVisualizer:
             label='video')
 
         timestamp_max = max(reward_signal.timestamp_s, self._reward_window_width)
-        self._max_observed_reward = max(
+        self._max_observed_reward = max(elem for elem in [
             self._max_observed_reward,
             np.max(reward_signal.combined_reward),
             np.max(reward_signal.audio_reward) if reward_signal.audio_reward is not None else -math.inf,
             np.max(reward_signal.video_reward) if reward_signal.video_reward is not None else -math.inf,
-        )
+        ] if elem is not None)
         self._min_observed_reward = min(elem for elem in [
             self._min_observed_reward,
             np.min(reward_signal.combined_reward),
