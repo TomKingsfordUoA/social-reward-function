@@ -106,8 +106,11 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
     def _gen(self) -> None:
         if self._play_audio:
             # we need to assign to a variable, even if unused, to prevent MediaPlayer from being GC'd
+            # TODO(TK): consider moving this to the audio file sensor
             audio_player = MediaPlayer(self._file)  # noqa
             print("MediaPlayer (audio) loaded", flush=True)
+        else:
+            audio_player = None
         cap = cv2.VideoCapture(self._file)  # noqa
         if not cap.isOpened():
             raise RuntimeError("Failed to open video file!")
@@ -117,6 +120,10 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
         wallclock_begin = time.time()
         timestamp_begin: Optional[float] = None
         while True:
+            # Retrieve a frame to precent garbage collection:
+            if audio_player is not None:
+                audio_player.get_frame(force_refresh=False, show=False)
+
             ret, frame = cap.read()
             timestamp_s = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0  # noqa
             if timestamp_begin is None:
