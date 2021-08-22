@@ -144,7 +144,10 @@ class RewardFunction:
     def _load_audio_classifier() -> EmotionRecognizer:
         estimators = get_best_estimators(classification=True)  # type: ignore
         best_estimator = max(estimators, key=lambda elem: cast(float, elem[2]))  # elem[2] is accuracy
-        return EmotionRecognizer(best_estimator[0])  # type: ignore
+        return EmotionRecognizer(  # type: ignore
+            model=best_estimator[0],
+            emotions=["happy", "neutral", "sad"],
+            balance=True)
 
     @staticmethod
     def _load_video_classifier() -> RMN:

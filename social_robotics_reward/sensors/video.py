@@ -107,10 +107,13 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
         if self._play_audio:
             # we need to assign to a variable, even if unused, to prevent MediaPlayer from being GC'd
             audio_player = MediaPlayer(self._file)  # noqa
+            print("MediaPlayer (audio) loaded", flush=True)
         cap = cv2.VideoCapture(self._file)  # noqa
-        timestamp_target: Optional[float] = None
         if not cap.isOpened():
             raise RuntimeError("Failed to open video file!")
+        print("VideoCapture file loaded", flush=True)
+
+        timestamp_target: Optional[float] = None
         wallclock_begin = time.time()
         timestamp_begin: Optional[float] = None
         while True:
