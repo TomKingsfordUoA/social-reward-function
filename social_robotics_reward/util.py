@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import time
+import typing
 from asyncio import Task
 from datetime import timedelta
 from typing import TypeVar, Callable, AsyncGenerator, Any, Optional, cast, Awaitable, Dict, Tuple
@@ -54,7 +55,7 @@ async def interleave_fifo(generators: Dict[str, AsyncGenerator[Any, None]], stop
             # Drop any done and StopAsyncException-throwing tasks and associated generators, as they're done
             tags_to_drop = [tags for tags, task in tasks.items() if task is not None and task.done() and task.exception() is not None]
             for tags in tags_to_drop:
-                exc = cast(Task[Any], tasks[tags]).exception()
+                exc = tasks[tags].exception()
                 if exc is not None and not isinstance(exc, StopAsyncIteration):
                     raise exc
                 tasks[tags] = None

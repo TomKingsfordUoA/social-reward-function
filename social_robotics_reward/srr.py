@@ -8,7 +8,6 @@ from typing import Any, Dict, cast
 import cv2  # type: ignore
 import numpy as np
 import yaml
-from numpy.typing import ArrayLike
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
@@ -112,9 +111,8 @@ async def main_async() -> None:
                 #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
 
                 # Display image frame:
-                displayable_image = cast(ArrayLike, np.copy(tagged_item.item.video_data))  # type: ignore
-                cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100),
-                            cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                displayable_image = np.copy(tagged_item.item.video_data)
+                cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (live)', displayable_image)
                 cv2.waitKey(1)  # milliseconds
 
@@ -124,7 +122,7 @@ async def main_async() -> None:
                 reward_function.push_video_frame(video_frame=tagged_item.item)
 
                 # Display image frame:
-                displayable_image = cast(ArrayLike, np.copy(tagged_item.item.video_data))  # type: ignore
+                displayable_image = np.copy(tagged_item.item.video_data)
                 cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (downsampled)', displayable_image)
                 cv2.waitKey(1)  # milliseconds

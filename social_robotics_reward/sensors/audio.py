@@ -7,11 +7,10 @@ import queue
 import tempfile
 import time
 import wave
-from typing import Any, AsyncGenerator
+import typing
 
 import librosa  # type: ignore
 import pyaudio  # type: ignore
-from numpy.typing import ArrayLike
 
 from social_robotics_reward.util import CodeBlockTimer
 
@@ -19,7 +18,7 @@ from social_robotics_reward.util import CodeBlockTimer
 @dataclasses.dataclass(frozen=True)
 class AudioFrame:
     timestamp_s: float
-    audio_data: ArrayLike
+    audio_data: typing.Any  # TODO(TK): replace with np.typing.ArrayLike when numpy upgrades to 1.20+ (conditional on TensorFlow support)
     sample_rate: int  # samples/sec
 
 
@@ -35,7 +34,7 @@ class AudioFrameGenerator(abc.ABC):
     def __enter__(self) -> 'AudioFrameGenerator':
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         return
 
     def _start(self) -> None:
@@ -44,7 +43,7 @@ class AudioFrameGenerator(abc.ABC):
     def _gen(self) -> None:
         raise NotImplementedError()
 
-    async def gen_async(self) -> AsyncGenerator[AudioFrame, None]:
+    async def gen_async(self) -> typing.AsyncGenerator[AudioFrame, None]:
         try:
             if not self._proc.is_alive():
                 self._proc.start()
@@ -135,7 +134,7 @@ class AudioFileFrameGenerator(AudioFrameGenerator):
     def __enter__(self) -> 'AudioFileFrameGenerator':
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         return
 
     def _gen(self) -> None:

@@ -5,17 +5,16 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Any, Optional, AsyncGenerator
+import typing
 
 import cv2  # type: ignore
 from ffpyplayer.player import MediaPlayer  # type: ignore
-from numpy.typing import ArrayLike
 
 
 @dataclasses.dataclass
 class VideoFrame:
     timestamp_s: float
-    video_data: ArrayLike
+    video_data: typing.Any  # TODO(TK): replace with np.typing.ArrayLike when numpy upgrades to 1.20+ (conditional on TensorFlow support)
 
 
 class VideoFrameGenerator(abc.ABC):
@@ -31,13 +30,13 @@ class VideoFrameGenerator(abc.ABC):
     def __enter__(self) -> 'VideoFrameGenerator':
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         return
 
     def _gen(self) -> None:
         raise NotImplementedError()
 
-    async def gen_async_live(self) -> AsyncGenerator[VideoFrame, None]:
+    async def gen_async_live(self) -> typing.AsyncGenerator[VideoFrame, None]:
         try:
             if not self._proc.is_alive():
                 self._proc.start()
@@ -51,7 +50,7 @@ class VideoFrameGenerator(abc.ABC):
         except asyncio.CancelledError:
             pass
 
-    async def gen_async_downsampled(self) -> AsyncGenerator[VideoFrame, None]:
+    async def gen_async_downsampled(self) -> typing.AsyncGenerator[VideoFrame, None]:
         try:
             if not self._proc.is_alive():
                 self._proc.start()
@@ -71,8 +70,8 @@ class WebcamFrameGenerator(VideoFrameGenerator):
         cap = cv2.VideoCapture(0)  # noqa
         if not cap.isOpened():
             raise RuntimeError("Failed to open camera")
-        timestamp_initial: Optional[float] = None
-        timestamp_target: Optional[float] = None
+        timestamp_initial: typing.Optional[float] = None
+        timestamp_target: typing.Optional[float] = None
         while True:
             ret, frame = cap.read()
             timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
@@ -116,9 +115,9 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             raise RuntimeError("Failed to open video file!")
         print("VideoCapture file loaded", flush=True)
 
-        timestamp_target: Optional[float] = None
+        timestamp_target: typing.Optional[float] = None
         wallclock_begin = time.time()
-        timestamp_begin: Optional[float] = None
+        timestamp_begin: typing.Optional[float] = None
         while True:
             # Retrieve a frame to precent garbage collection:
             if audio_player is not None:
