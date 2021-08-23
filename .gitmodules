@@ -4,3 +4,6 @@
 [submodule "residual_masking_network"]
 	path = residual_masking_network
 	url = git@github.com:TomKingsfordUoA/ResidualMaskingNetwork.git
+[submodule "mevonai_speech_emotion_recognition"]
+	path = mevonai_speech_emotion_recognition
+	url = git@github.com:TomKingsfordUoA/MevonAI-Speech-Emotion-Recognition.git

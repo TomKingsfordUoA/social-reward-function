@@ -31,6 +31,17 @@ To change branches and update submodules:
     git checkout <branch>
     git submodule update --init
 
+## Known Limitations
+
+Speech emotion detection is trained using the following datasets:
+* [RAVDESS](https://zenodo.org/record/1188976)
+* [EMODB](http://emodb.bilderbar.info/docu/)
+* [TESS](https://tspace.library.utoronto.ca/handle/1807/24487)
+
+These datasets are collected under relatively sterile laboratory conditions and thus there are understandably
+some issues generalizing to realistic situations. We have decided to include these models under the expectation 
+that the generation of more realistic datasets will lead to more accurate models in the future.
+
 ## Citation
 
 If you use this work, please cite:
