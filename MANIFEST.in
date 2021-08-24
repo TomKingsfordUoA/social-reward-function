@@ -1,18 +1,9 @@
 # added by check-manifest
-recursive-include . *requirements.txt
-recursive-include . */README.md
-recursive-include . */py.typed
-recursive-include . *.h5
-recursive-include . *.pickle
-recursive-include . *.npy
-recursive-include . *.sh
-recursive-include residual_masking_network *.json
-recursive-include residual_masking_network *.yml
-recursive-include residual_masking_network *.cfg
-recursive-include residual_masking_network *.in
-recursive-include residual_masking_network *.py
-recursive-include residual_masking_network *.toml
-recursive-include residual_masking_network *.yaml
+include *.txt
+include *.yaml
+recursive-include emotion_recognition_using_speech *.h5
+recursive-include emotion_recognition_using_speech *.npy
+recursive-include emotion_recognition_using_speech *.pickle
 recursive-include mevonai_speech_emotion_recognition *.ac
 recursive-include mevonai_speech_emotion_recognition *.am
 recursive-include mevonai_speech_emotion_recognition *.c
@@ -34,6 +25,7 @@ recursive-include mevonai_speech_emotion_recognition *.fla
 recursive-include mevonai_speech_emotion_recognition *.gif
 recursive-include mevonai_speech_emotion_recognition *.guess
 recursive-include mevonai_speech_emotion_recognition *.h
+recursive-include mevonai_speech_emotion_recognition *.h5
 recursive-include mevonai_speech_emotion_recognition *.html
 recursive-include mevonai_speech_emotion_recognition *.hxx
 recursive-include mevonai_speech_emotion_recognition *.in
@@ -49,7 +41,7 @@ recursive-include mevonai_speech_emotion_recognition *.otf
 recursive-include mevonai_speech_emotion_recognition *.php
 recursive-include mevonai_speech_emotion_recognition *.project
 recursive-include mevonai_speech_emotion_recognition *.py
-recursive-include mevonai_speech_emotion_recognition *.pyc
+recursive-include mevonai_speech_emotion_recognition *.sh
 recursive-include mevonai_speech_emotion_recognition *.sln
 recursive-include mevonai_speech_emotion_recognition *.sub
 recursive-include mevonai_speech_emotion_recognition *.svg
@@ -63,4 +55,15 @@ recursive-include mevonai_speech_emotion_recognition *.wav
 recursive-include mevonai_speech_emotion_recognition *.woff
 recursive-include mevonai_speech_emotion_recognition *.yml
 recursive-include mevonai_speech_emotion_recognition Makefile
-prune venv
+recursive-include residual_masking_network *.cfg
+recursive-include residual_masking_network *.in
+recursive-include residual_masking_network *.json
+recursive-include residual_masking_network *.py
+recursive-include residual_masking_network *.sh
+recursive-include residual_masking_network *.toml
+recursive-include residual_masking_network *.txt
+recursive-include residual_masking_network *.yaml
+recursive-include residual_masking_network *.yml
+recursive-include scripts *.sh
+recursive-include social_robotics_reward *.typed
+recursive-include emotion_recognition_using_speech *.txt
