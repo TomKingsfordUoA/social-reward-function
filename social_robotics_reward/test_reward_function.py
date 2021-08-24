@@ -71,7 +71,7 @@ def test_reward_function_constants_series() -> None:
     }))
     assert reward_signal_constants.s_video_coefficients.equals(pd.Series({
         'angry': -1.0,
-        'disgust': -1.0,
+        'disgusted': -1.0,
         'fear': -1.0,
         'happy': 1.0,
         'sad': -1.0,

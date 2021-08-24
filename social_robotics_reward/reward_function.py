@@ -33,6 +33,43 @@ class EmotionProbabilities:
     surprised: Optional[float] = dataclasses.field(default=None)
 
 
+class VideoEmotionRecognizer:
+    def detect_emotion_for_single_frame(self, frame: Any) -> typing.Iterable[EmotionProbabilities]:
+        raise NotImplementedError()
+
+
+class RMNVideoEmotionRecognizer(VideoEmotionRecognizer):
+    _emotions = frozenset(('neutral', 'happy', 'sad', 'angry', 'fear', 'disgust', 'surprise'))
+
+    def __init__(self) -> None:
+        self._rmn = RMN()
+
+    def detect_emotion_for_single_frame(self, frame: Any) -> typing.Iterable[EmotionProbabilities]:
+        emotion_probabilities_all_faces = [
+            {
+                key: value
+                for emotion in face['proba_list']
+                for key, value in emotion.items()
+             }
+            for face in self._rmn.detect_emotion_for_single_frame(frame=frame)
+        ]
+        for emotion_probabilities in emotion_probabilities_all_faces:
+            if len(set(emotion_probabilities.keys()) - self._emotions) != 0:
+                raise ValueError("Model returned unexpected emotions")
+        return [
+            EmotionProbabilities(
+                happy=emotion_probabilities['happy'],
+                neutral=emotion_probabilities['neutral'],
+                sad=emotion_probabilities['sad'],
+                angry=emotion_probabilities['angry'],
+                fearful=emotion_probabilities['fear'],
+                disgusted=emotion_probabilities['disgust'],
+                surprised=emotion_probabilities['surprise'],
+            )
+            for emotion_probabilities in emotion_probabilities_all_faces
+        ]
+
+
 class AudioEmotionRecognizer:
     def predict_proba(self, audio_data: Any, sample_rate: int) -> EmotionProbabilities:
         raise NotImplementedError()
@@ -105,14 +142,13 @@ class RewardSignalConfig:
 
     @property
     def s_video_coefficients(self) -> pd.Series:
-        # FIXME(TK): standardise these as the same tense as audio
         return pd.Series({
             'angry': self.wt_video_angry,
-            'disgust': self.wt_video_disgusted,
-            'fear': self.wt_video_fearful,
+            'disgusted': self.wt_video_disgusted,
+            'fearful': self.wt_video_fearful,
             'happy': self.wt_video_happy,
             'sad': self.wt_video_sad,
-            'surprise': self.wt_video_surprised,
+            'surprised': self.wt_video_surprised,
             'neutral': self.wt_video_neutral,
         })
 
@@ -217,8 +253,8 @@ class RewardFunction:
         return ERUSAudioEmotionRecognizer(), MevonAIAudioEmotionRecognizer()
 
     @staticmethod
-    def _load_video_classifier() -> RMN:
-        return RMN()  # type: ignore
+    def _load_video_classifiers() -> typing.Iterable[VideoEmotionRecognizer]:
+        return RMNVideoEmotionRecognizer(),
 
     def stop(self) -> None:
         print("stopped")
@@ -264,7 +300,7 @@ class RewardFunction:
 
     def _gen(self) -> None:
         # Initialize emotion classifiers:
-        _video_classifier = RewardFunction._load_video_classifier()
+        _video_classifiers = RewardFunction._load_video_classifiers()
         _audio_classifiers = RewardFunction._load_audio_classifiers()
 
         buffer_video_frames = [self._queue_video_frames.get(block=True, timeout=None)]
@@ -326,8 +362,15 @@ class RewardFunction:
                     if timestamp_s > timestamp_next
                 ]
 
-                df_video_emotions = pd.DataFrame(included_emotions_video_frames)  # FIXME(TK): Video emotion recognition should use the same abstractions as audio
-                df_audio_emotions = pd.DataFrame([emotion_probs.__dict__ for emotion_probs in included_emotions_audio_frames])
+                df_video_emotions = pd.DataFrame([
+                    emotion_probs.__dict__
+                    for emotion_probs_all_faces in included_emotions_video_frames
+                    for emotion_probs in emotion_probs_all_faces
+                ])
+                df_audio_emotions = pd.DataFrame([
+                    emotion_probs.__dict__
+                    for emotion_probs in included_emotions_audio_frames
+                ])
 
                 # Calculate the combined reward:
                 if not df_audio_emotions.empty and set(self._config.s_audio_coefficients.index) != set(df_audio_emotions.columns):
@@ -361,10 +404,11 @@ class RewardFunction:
 
             # Emotion predictions:
             with CodeBlockTimer() as timer:
-                emotions_video_frames += [
-                    (frame.timestamp_s, {key: value for emotion in face['proba_list'] for key, value in emotion.items()})
-                    for frame in buffer_video_frames
-                    for face in _video_classifier.detect_emotion_for_single_frame(frame=frame.video_data)]
+                for video_classifier in _video_classifiers:
+                    emotions_video_frames += [
+                        (frame.timestamp_s, video_classifier.detect_emotion_for_single_frame(frame.video_data))
+                        for frame in buffer_video_frames
+                    ]
             if len(buffer_video_frames) != 0:
                 print(f'Video prediction took {timer.timedelta} '
                       f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
@@ -375,7 +419,8 @@ class RewardFunction:
                 for audio_classifier in _audio_classifiers:
                     emotions_audio_frames += [
                         (frame.timestamp_s, audio_classifier.predict_proba(audio_data=frame.audio_data, sample_rate=frame.sample_rate))
-                        for frame in buffer_audio_frames]
+                        for frame in buffer_audio_frames
+                    ]
             if len(buffer_audio_frames) != 0:
                 print(f'Audio prediction took {timer.timedelta}')
             buffer_audio_frames.clear()
