@@ -7,7 +7,7 @@ echo '=== Linting ==='
 flake8 social_robotics_reward *.py
 
 echo '=== Static Type Checking ==='
-mypy --strict social_robotics_reward *.py
+mypy --strict social_robotics_reward setup.py
 
 echo '=== Testing ==='
 pytest -v .

@@ -5,9 +5,8 @@ import multiprocessing
 import queue
 import sys
 import time
+import math
 import typing
-from math import ceil
-from typing import Optional, cast, AsyncGenerator, Generator, Dict, Tuple, List, Any
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -24,17 +23,17 @@ Timestamp = float
 
 @dataclasses.dataclass(frozen=True)
 class EmotionProbabilities:
-    happy: Optional[float] = dataclasses.field(default=None)
-    neutral: Optional[float] = dataclasses.field(default=None)
-    sad: Optional[float] = dataclasses.field(default=None)
-    angry: Optional[float] = dataclasses.field(default=None)
-    fearful: Optional[float] = dataclasses.field(default=None)
-    disgusted: Optional[float] = dataclasses.field(default=None)
-    surprised: Optional[float] = dataclasses.field(default=None)
+    happy: typing.Optional[float] = dataclasses.field(default=None)
+    neutral: typing.Optional[float] = dataclasses.field(default=None)
+    sad: typing.Optional[float] = dataclasses.field(default=None)
+    angry: typing.Optional[float] = dataclasses.field(default=None)
+    fearful: typing.Optional[float] = dataclasses.field(default=None)
+    disgusted: typing.Optional[float] = dataclasses.field(default=None)
+    surprised: typing.Optional[float] = dataclasses.field(default=None)
 
 
 class VideoEmotionRecognizer:
-    def detect_emotion_for_single_frame(self, frame: Any) -> typing.Iterable[EmotionProbabilities]:
+    def detect_emotion_for_single_frame(self, frame: typing.Any) -> typing.Iterable[EmotionProbabilities]:
         raise NotImplementedError()
 
 
@@ -42,9 +41,9 @@ class RMNVideoEmotionRecognizer(VideoEmotionRecognizer):
     _emotions = frozenset(('neutral', 'happy', 'sad', 'angry', 'fear', 'disgust', 'surprise'))
 
     def __init__(self) -> None:
-        self._rmn = RMN()
+        self._rmn = RMN()  # type: ignore
 
-    def detect_emotion_for_single_frame(self, frame: Any) -> typing.Iterable[EmotionProbabilities]:
+    def detect_emotion_for_single_frame(self, frame: typing.Any) -> typing.Iterable[EmotionProbabilities]:
         emotion_probabilities_all_faces = [
             {
                 key: value
@@ -71,17 +70,17 @@ class RMNVideoEmotionRecognizer(VideoEmotionRecognizer):
 
 
 class AudioEmotionRecognizer:
-    def predict_proba(self, audio_data: Any, sample_rate: int) -> EmotionProbabilities:
+    def predict_proba(self, audio_data: typing.Any, sample_rate: int) -> EmotionProbabilities:
         raise NotImplementedError()
 
 
 class MevonAIAudioEmotionRecognizer(AudioEmotionRecognizer):
     _emotions = frozenset(('Neutral', 'Happy', 'Sad', 'Angry', 'Fearful', 'Disgusted', 'Surprised'))
 
-    def __init__(self, model_file: Optional[str] = None) -> None:
+    def __init__(self, model_file: typing.Optional[str] = None) -> None:
         self._emotion_recognizer = MevonAiEmotionRecognizer(model_file=model_file)
 
-    def predict_proba(self, audio_data: Any, sample_rate: int) -> EmotionProbabilities:
+    def predict_proba(self, audio_data: typing.Any, sample_rate: int) -> EmotionProbabilities:
         emotion_probabilities = self._emotion_recognizer.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
         if len(set(emotion_probabilities.keys()) - self._emotions) != 0:
             raise ValueError("Model returned unexpected emotions")
@@ -101,13 +100,13 @@ class ERUSAudioEmotionRecognizer(AudioEmotionRecognizer):
 
     def __init__(self) -> None:
         estimators = emotion_recognition_using_speech.emotion_recognition.get_best_estimators(classification=True)  # type: ignore
-        best_estimator = max(estimators, key=lambda elem: cast(float, elem[2]))  # elem[2] is accuracy
+        best_estimator = max(estimators, key=lambda elem: typing.cast(float, elem[2]))  # elem[2] is accuracy
         self._emotion_recognizer = emotion_recognition_using_speech.emotion_recognition.EmotionRecognizer(  # type: ignore
             model=best_estimator[0],
             emotions=["happy", "neutral", "sad"],
             balance=True)
 
-    def predict_proba(self, audio_data: Any, sample_rate: int) -> EmotionProbabilities:
+    def predict_proba(self, audio_data: typing.Any, sample_rate: int) -> EmotionProbabilities:
         emotion_probabilities = self._emotion_recognizer.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
         if len(set(emotion_probabilities.keys()) - self._emotions) != 0:
             raise ValueError("Model returned unexpected emotions")
@@ -165,7 +164,7 @@ class RewardSignalConfig:
         })
 
     @staticmethod
-    def from_dict(d: Dict[str, Any]) -> 'RewardSignalConfig':
+    def from_dict(d: typing.Dict[str, typing.Any]) -> 'RewardSignalConfig':
         key_audio_weights = 'audio_weights'
         key_video_weights = 'video_weights'
         key_period = 'period_s'
@@ -212,8 +211,8 @@ class RewardSignalConfig:
 class RewardSignal:
     timestamp_s: float
     combined_reward: float
-    audio_reward: Optional[float]
-    video_reward: Optional[float]
+    audio_reward: typing.Optional[float]
+    video_reward: typing.Optional[float]
     detected_audio_emotions: pd.DataFrame
     detected_video_emotions: pd.DataFrame
 
@@ -245,7 +244,7 @@ class RewardFunction:
     def __enter__(self) -> 'RewardFunction':
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         pass
 
     @staticmethod
@@ -274,7 +273,7 @@ class RewardFunction:
         print(f"{RewardFunction.__name__} got audio frame t={audio_frame.timestamp_s}", flush=True)
         self._queue_audio_frames.put(audio_frame)
 
-    def gen(self) -> Generator[RewardSignal, None, None]:
+    def gen(self) -> typing.Generator[RewardSignal, None, None]:
         if self._proc.is_alive():
             raise RuntimeError(f"{RewardFunction.__name__} already running")
         self._proc.start()
@@ -284,7 +283,7 @@ class RewardFunction:
             elem = self._queue_reward_signal.get()
             yield elem
 
-    async def gen_async(self) -> AsyncGenerator[RewardSignal, None]:
+    async def gen_async(self) -> typing.AsyncGenerator[RewardSignal, None]:
         try:
             if self._proc.is_alive():
                 raise RuntimeError(f"{RewardFunction.__name__} already running")
@@ -304,9 +303,9 @@ class RewardFunction:
         _audio_classifiers = RewardFunction._load_audio_classifiers()
 
         buffer_video_frames = [self._queue_video_frames.get(block=True, timeout=None)]
-        emotions_video_frames: List[Tuple[Timestamp, Dict[str, float]]] = []
+        emotions_video_frames: typing.List[typing.Tuple[Timestamp, typing.Iterable[EmotionProbabilities]]] = []
         buffer_audio_frames = [self._queue_audio_frames.get(block=True, timeout=None)]
-        emotions_audio_frames: List[Tuple[Timestamp, Dict[str, float]]] = []
+        emotions_audio_frames: typing.List[typing.Tuple[Timestamp, EmotionProbabilities]] = []
         wallclock_initial = time.time()
         wallclock_next = wallclock_initial + self._config.period_s
 
@@ -324,7 +323,7 @@ class RewardFunction:
             lag = now - wallclock_next
             if lag > self._config.threshold_latency_s:
                 wallclock_pre_correction = wallclock_next
-                wallclock_next += ceil(lag / self._config.period_s) * self._config.period_s
+                wallclock_next += math.ceil(lag / self._config.period_s) * self._config.period_s
                 print(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up "
                       f"[{wallclock_pre_correction - wallclock_initial:.2f}, {wallclock_next - wallclock_initial})",
                       file=sys.stderr)

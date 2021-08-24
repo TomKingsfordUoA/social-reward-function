@@ -3,7 +3,7 @@ import asyncio
 import dataclasses
 import signal
 import time
-from typing import Any, Dict, cast
+from typing import Any, Dict
 
 import cv2  # type: ignore
 import numpy as np
@@ -111,7 +111,8 @@ async def main_async() -> None:
                 #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
 
                 # Display image frame:
-                displayable_image = np.copy(tagged_item.item.video_data)
+                # TODO(TK): bring back types with numpy>=1.20
+                displayable_image = np.ndarray, np.copy(tagged_item.item.video_data)  # type: ignore
                 cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (live)', displayable_image)
                 cv2.waitKey(1)  # milliseconds
@@ -122,7 +123,8 @@ async def main_async() -> None:
                 reward_function.push_video_frame(video_frame=tagged_item.item)
 
                 # Display image frame:
-                displayable_image = np.copy(tagged_item.item.video_data)
+                # TODO(TK): bring back types with numpy>=1.20
+                displayable_image = np.copy(tagged_item.item.video_data)  # type: ignore
                 cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow('Video (downsampled)', displayable_image)
                 cv2.waitKey(1)  # milliseconds
