@@ -1,22 +1,22 @@
 reward_signal:
   audio_weights:
-    overall: 0.2
+    overall: 0.25
     angry: -1.0
     disgusted: -1.0
     fearful: -1.0
     happy: 1.0
     sad: -1.0
-    surprised: 0.0
+    surprised: 0.5
     neutral: 0.0
   video_weights:
-    overall: 0.8
+    overall: 0.75
     angry: -1.0
     disgusted: -1.0
     fearful: -1.0
     happy: 1.0
     sad: -1.0
-    surprised: 0.0
+    surprised: 0.5
     neutral: 0.0
-  period_s: 10.0
+  period_s: 2.5
   threshold_audio_power: 0.00001
   threshold_latency_s: 5.0

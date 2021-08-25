@@ -82,8 +82,14 @@ class MevonAIAudioEmotionRecognizer(AudioEmotionRecognizer):
 
     def predict_proba(self, audio_data: typing.Any, sample_rate: int) -> EmotionProbabilities:
         emotion_probabilities = self._emotion_recognizer.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
+
         if len(set(emotion_probabilities.keys()) - self._emotions) != 0:
             raise ValueError("Model returned unexpected emotions")
+
+        for emotion in emotion_probabilities:
+            if emotion_probabilities[emotion] is None:
+                emotion_probabilities[emotion] = 0.0
+
         return EmotionProbabilities(
             happy=emotion_probabilities['Happy'],
             neutral=emotion_probabilities['Neutral'],
@@ -108,8 +114,14 @@ class ERUSAudioEmotionRecognizer(AudioEmotionRecognizer):
 
     def predict_proba(self, audio_data: typing.Any, sample_rate: int) -> EmotionProbabilities:
         emotion_probabilities = self._emotion_recognizer.predict_proba(audio_data=audio_data, sample_rate=sample_rate)
+
         if len(set(emotion_probabilities.keys()) - self._emotions) != 0:
             raise ValueError("Model returned unexpected emotions")
+
+        for emotion in emotion_probabilities:
+            if emotion_probabilities[emotion] is None:
+                emotion_probabilities[emotion] = 0.0
+
         return EmotionProbabilities(
             happy=emotion_probabilities['happy'],
             neutral=emotion_probabilities['neutral'],
@@ -371,17 +383,25 @@ class RewardFunction:
                     for emotion_probs in included_emotions_audio_frames
                 ])
 
+                # NaN means no value provided by estimator, so replace with 0.0:
+                df_video_emotions.fillna(0.0, inplace=True)
+                df_audio_emotions.fillna(0.0, inplace=True)
+
                 # Calculate the combined reward:
                 if not df_audio_emotions.empty and set(self._config.s_audio_coefficients.index) != set(df_audio_emotions.columns):
                     raise ValueError(f"Unexpected audio emotions: got {df_audio_emotions.columns} expected {self._config.s_audio_coefficients.index}")
                 if not df_video_emotions.empty and set(self._config.s_video_coefficients.index) != set(df_video_emotions.columns):
                     raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {self._config.s_video_coefficients.index}")
-                audio_reward = None if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum()
-                video_reward = None if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum()
-                combined_reward = (
-                        self._config.wt_audio_overall * (audio_reward if audio_reward is not None else 0.0) +
-                        self._config.wt_video_overall * (video_reward if video_reward is not None else 0.0)
-                )
+                audio_reward = 0.0 if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum()
+                video_reward = 0.0 if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum()
+                combined_reward = self._config.wt_audio_overall * audio_reward + self._config.wt_video_overall * video_reward
+
+                if not math.isfinite(video_reward):
+                    raise ValueError(f'video_reward is not finite! {video_reward}')
+                if not math.isfinite(audio_reward):
+                    raise ValueError(f'audio_reward is not finite! {audio_reward}')
+                if not math.isfinite(combined_reward):
+                    raise ValueError(f'combined_reward is not finite! {combined_reward}')
 
                 self._queue_reward_signal.put(RewardSignal(
                     timestamp_s=timestamp_next,
