@@ -37,7 +37,7 @@ async def main_async() -> None:
     parser.add_argument('--viz_video_downsample_rate', type=int, default=1)
     parser.add_argument('--viz_reward_window_width', type=float, default=30.0)
     parser.add_argument('--viz_threshold_lag_s', type=float, default=10.0)
-    parser.add_argument('--audio_period_propn', type=float, default=0.5)
+    parser.add_argument('--audio_period_propn', type=float, default=0.25)
     parser.add_argument('--audio_segment_duration_s', type=float, default=2.0)
     parser.add_argument('--video_target_fps', type=float, default=0.5)
     args = parser.parse_args()

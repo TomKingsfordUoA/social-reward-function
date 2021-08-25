@@ -1,18 +1,19 @@
 import asyncio
 import ctypes
 import dataclasses
+import math
 import multiprocessing
 import queue
 import sys
 import time
-import math
 import typing
 
 import numpy as np
 import pandas as pd  # type: ignore
 
 import emotion_recognition_using_speech.emotion_recognition
-from mevonai_speech_emotion_recognition.src.speechEmotionRecognition import EmotionRecognizer as MevonAiEmotionRecognizer
+from mevonai_speech_emotion_recognition.src.speechEmotionRecognition import \
+    EmotionRecognizer as MevonAiEmotionRecognizer
 from residual_masking_network.rmn import RMN
 from social_robotics_reward.sensors.audio import AudioFrame
 from social_robotics_reward.sensors.video import VideoFrame
@@ -238,6 +239,44 @@ class RewardSignal:
                f"\tdetected_video_emotions=\n{self.detected_video_emotions.mean()}\n" \
                f")"
 
+    def __add__(self, other: 'RewardSignal') -> 'RewardSignal':
+        audio_reward = 0.0
+        if self.audio_reward is not None:
+            audio_reward += self.audio_reward
+        if other.audio_reward is not None:
+            audio_reward += other.audio_reward
+
+        video_reward = 0.0
+        if self.video_reward is not None:
+            video_reward += self.video_reward
+        if other.video_reward is not None:
+            video_reward += other.video_reward
+
+        return RewardSignal(
+            timestamp_s=max(self.timestamp_s, other.timestamp_s),
+            combined_reward=self.combined_reward + other.combined_reward,
+            audio_reward=audio_reward,
+            video_reward=video_reward,
+            detected_audio_emotions=pd.concat([self.detected_audio_emotions, other.detected_audio_emotions]),
+            detected_video_emotions=pd.concat([self.detected_video_emotions, other.detected_video_emotions]),
+        )
+
+    def __iadd__(self, other: 'RewardSignal') -> 'RewardSignal':
+        return self + other
+
+    def __truediv__(self, other: typing.Union[int, float]) -> 'RewardSignal':
+        return RewardSignal(
+            timestamp_s=self.timestamp_s,
+            combined_reward=self.combined_reward / other,
+            audio_reward=self.audio_reward / other if self.audio_reward is not None else None,
+            video_reward=self.video_reward / other if self.video_reward is not None else None,
+            detected_audio_emotions=self.detected_audio_emotions / other,
+            detected_video_emotions=self.detected_video_emotions / other,
+        )
+
+    def __itruediv__(self, other: typing.Union[int, float]) -> 'RewardSignal':
+        return self / other
+
 
 class RewardFunction:
     def __init__(self, config: RewardSignalConfig) -> None:
@@ -261,7 +300,7 @@ class RewardFunction:
 
     @staticmethod
     def _load_audio_classifiers() -> typing.Iterable[AudioEmotionRecognizer]:
-        return ERUSAudioEmotionRecognizer(), MevonAIAudioEmotionRecognizer()
+        return ERUSAudioEmotionRecognizer(), MevonAIAudioEmotionRecognizer(),
 
     @staticmethod
     def _load_video_classifiers() -> typing.Iterable[VideoEmotionRecognizer]:

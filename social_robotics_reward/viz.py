@@ -1,3 +1,4 @@
+import functools
 import math
 import sys
 import time
@@ -38,6 +39,10 @@ class RewardSignalVisualizer:
         self._max_observed_reward = 1.0
         self._min_observed_reward = -1.0
 
+        # Moving average calculation:
+        self._moving_average_window_width_s = 240  # FIXME(TK): move this to config
+        self._moving_average_window: List[RewardSignal] = []
+
     def __enter__(self) -> 'RewardSignalVisualizer':
         self._time_begin = time.time()
         return self
@@ -61,6 +66,18 @@ class RewardSignalVisualizer:
         if self._time_begin is None:
             raise ValueError(f"{RewardSignalVisualizer.draw_reward_signal.__name__} called outside context manager")
 
+        # Manage moving average:
+        self._moving_average_window.append(reward_signal)
+        self._moving_average_window = [elem for elem in self._moving_average_window
+                                       if reward_signal.timestamp_s - elem.timestamp_s <= self._moving_average_window_width_s]
+        average_reward_signal: Optional[RewardSignal]
+        if len(self._moving_average_window) != 0:
+            average_reward_signal = functools.reduce(RewardSignal.__add__, self._moving_average_window)
+            average_reward_signal /= len(self._moving_average_window)
+        else:
+            average_reward_signal = None
+        print("average_reward_signal", average_reward_signal, flush=True)
+
         lag = time.time() - self._time_begin - reward_signal.timestamp_s
         if lag > self._threshold_lag_s:
             print(f"reward signal viz falling behind! lag={lag:.2f}", file=sys.stderr)
@@ -74,6 +91,13 @@ class RewardSignalVisualizer:
         color_video = '#000077'
 
         self._ax_reward.clear()
+        self._ax_reward.axhline(y=0, color='k', alpha=0.5)  # x-axis
+        if average_reward_signal is not None:
+            self._ax_reward.axhline(y=average_reward_signal.combined_reward, color=color_combined, linestyle='--', alpha=0.5)
+            if average_reward_signal.video_reward is not None:
+                self._ax_reward.axhline(y=average_reward_signal.video_reward, color=color_video, linestyle='--', alpha=0.5)
+            if average_reward_signal.audio_reward is not None:
+                self._ax_reward.axhline(y=average_reward_signal.audio_reward, color=color_audio, linestyle='--', alpha=0.5)
         self._ax_reward.plot(
             [elem.timestamp_s for elem in self._reward_signal],
             [elem.combined_reward for elem in self._reward_signal],
