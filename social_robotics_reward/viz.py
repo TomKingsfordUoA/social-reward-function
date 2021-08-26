@@ -169,16 +169,33 @@ class RewardSignalVisualizer:
             for emotion in self._previously_observed_audio_emotions - set(mean_detected_audio_emotions.index)
         })
 
+        n = 2
         self._ax_emotions.clear()
         self._ax_emotions.bar(
             x=np.arange(len(video_emotions.keys())),
             height=video_emotions.values(),
             color=color_video,
+            width=1.0 / n,
+        )
+        self._ax_emotions.bar(
+            x=np.arange(len(video_emotions.keys())) + 1.0 / n,
+            height=average_reward_signal.detected_video_emotions.mean(),
+            color=color_video,
+            width=1.0 / n,
+            hatch='x',
         )
         self._ax_emotions.bar(
             x=len(video_emotions.keys()) + np.arange(len(audio_emotions.keys())),
             height=audio_emotions.values(),
             color=color_audio,
+            width=1.0 / n,
+        )
+        self._ax_emotions.bar(
+            x=len(video_emotions.keys()) + np.arange(len(audio_emotions.keys())) + 1.0 / n,
+            height=average_reward_signal.detected_audio_emotions.mean(),
+            color=color_audio,
+            width=1.0 / n,
+            hatch='x',
         )
         self._ax_emotions.set_xticks(np.arange(len(video_emotions.keys()) + len(audio_emotions.keys())))
         self._ax_emotions.set_xticklabels(list(video_emotions.keys()) + list(audio_emotions.keys()))

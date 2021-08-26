@@ -1,7 +1,7 @@
 input:
 #  webcam:
   file:
-    path: './samples/youtube/clips/positive/billgates_verisatium.mp4'
+    path: './samples/youtube/clips/positive/topgun.mp4'
     play_audio: false
   audio:
     period_propn: 0.25
