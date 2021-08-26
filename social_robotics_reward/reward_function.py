@@ -8,6 +8,7 @@ import sys
 import time
 import typing
 
+import dataclasses_json
 import numpy as np
 import pandas as pd  # type: ignore
 
@@ -130,24 +131,24 @@ class ERUSAudioEmotionRecognizer(AudioEmotionRecognizer):
         )
 
 
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class EmotionWeights:
+    overall: float
+    angry: float
+    disgusted: float
+    fearful: float
+    happy: float
+    sad: float
+    surprised: float
+    neutral: float
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
 @dataclasses.dataclass(frozen=True)
 class RewardSignalConfig:
-    wt_video_overall: float
-    wt_video_angry: float
-    wt_video_disgusted: float
-    wt_video_fearful: float
-    wt_video_happy: float
-    wt_video_sad: float
-    wt_video_surprised: float
-    wt_video_neutral: float
-    wt_audio_overall: float
-    wt_audio_angry: float
-    wt_audio_disgusted: float
-    wt_audio_fearful: float
-    wt_audio_happy: float
-    wt_audio_sad: float
-    wt_audio_surprised: float
-    wt_audio_neutral: float
+    audio_weights: EmotionWeights
+    video_weights: EmotionWeights
     period_s: float
     threshold_audio_power: float
     threshold_latency_s: float
@@ -155,69 +156,26 @@ class RewardSignalConfig:
     @property
     def s_video_coefficients(self) -> pd.Series:
         return pd.Series({
-            'angry': self.wt_video_angry,
-            'disgusted': self.wt_video_disgusted,
-            'fearful': self.wt_video_fearful,
-            'happy': self.wt_video_happy,
-            'sad': self.wt_video_sad,
-            'surprised': self.wt_video_surprised,
-            'neutral': self.wt_video_neutral,
+            'angry': self.video_weights.angry,
+            'disgusted': self.video_weights.disgusted,
+            'fearful': self.video_weights.fearful,
+            'happy': self.video_weights.happy,
+            'sad': self.video_weights.sad,
+            'surprised': self.video_weights.surprised,
+            'neutral': self.video_weights.neutral,
         })
 
     @property
     def s_audio_coefficients(self) -> pd.Series:
         return pd.Series({
-            'angry': self.wt_audio_angry,
-            'disgusted': self.wt_audio_disgusted,
-            'fearful': self.wt_audio_fearful,
-            'happy': self.wt_audio_happy,
-            'sad': self.wt_audio_sad,
-            'surprised': self.wt_audio_surprised,
-            'neutral': self.wt_audio_neutral,
+            'angry': self.audio_weights.angry,
+            'disgusted': self.audio_weights.disgusted,
+            'fearful': self.audio_weights.fearful,
+            'happy': self.audio_weights.happy,
+            'sad': self.audio_weights.sad,
+            'surprised': self.audio_weights.surprised,
+            'neutral': self.audio_weights.neutral,
         })
-
-    @staticmethod
-    def from_dict(d: typing.Dict[str, typing.Any]) -> 'RewardSignalConfig':
-        key_audio_weights = 'audio_weights'
-        key_video_weights = 'video_weights'
-        key_period = 'period_s'
-        key_threshold_audio_power = 'threshold_audio_power'
-        key_threshold_latency_s = 'threshold_latency_s'
-
-        if set(d.keys()) != {key_audio_weights, key_video_weights, key_period, key_threshold_audio_power, key_threshold_latency_s}:
-            raise ValueError()
-        if set(d[key_audio_weights].keys()) != {'overall', 'happy', 'neutral', 'sad', 'angry', 'disgusted', 'fearful', 'surprised'}:
-            raise ValueError()
-        if set(d['video_weights'].keys()) != {'overall', 'angry', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral'}:
-            raise ValueError()
-        for value in list(d[key_audio_weights].values()) + list(d['video_weights'].values()):
-            if not isinstance(value, float):
-                raise ValueError()
-        if not isinstance(d[key_period], float):
-            raise ValueError()
-        if not isinstance(d[key_threshold_audio_power], float):
-            raise ValueError()
-        return RewardSignalConfig(
-            wt_video_overall=d[key_video_weights]['overall'],
-            wt_video_angry=d[key_video_weights]['angry'],
-            wt_video_disgusted=d[key_video_weights]['disgusted'],
-            wt_video_fearful=d[key_video_weights]['fearful'],
-            wt_video_happy=d[key_video_weights]['happy'],
-            wt_video_sad=d[key_video_weights]['sad'],
-            wt_video_surprised=d[key_video_weights]['surprised'],
-            wt_video_neutral=d[key_video_weights]['neutral'],
-            wt_audio_overall=d[key_audio_weights]['overall'],
-            wt_audio_angry=d[key_audio_weights]['angry'],
-            wt_audio_disgusted=d[key_audio_weights]['disgusted'],
-            wt_audio_fearful=d[key_audio_weights]['fearful'],
-            wt_audio_happy=d[key_audio_weights]['happy'],
-            wt_audio_sad=d[key_audio_weights]['sad'],
-            wt_audio_surprised=d[key_audio_weights]['surprised'],
-            wt_audio_neutral=d[key_audio_weights]['neutral'],
-            period_s=d[key_period],
-            threshold_audio_power=d[key_threshold_audio_power],
-            threshold_latency_s=d[key_threshold_latency_s],
-        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -372,7 +330,8 @@ class RewardFunction:
 
             # Do we need to skip release period(s)?
             lag = now - wallclock_next
-            if lag > self._config.threshold_latency_s:
+            skip_release_periods = lag > self._config.threshold_latency_s
+            if skip_release_periods:
                 wallclock_pre_correction = wallclock_next
                 wallclock_next += math.ceil(lag / self._config.period_s) * self._config.period_s
                 print(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up "
@@ -388,12 +347,16 @@ class RewardFunction:
                 timestamp_prev = timestamp_next - self._config.period_s
 
                 # Clean up skipped data:
-                emotions_video_frames = [(timestamp_s, predicted_emotions)
-                                         for timestamp_s, predicted_emotions in emotions_video_frames
-                                         if timestamp_s > timestamp_prev]
-                emotions_audio_frames = [(timestamp_s, predicted_emotions)
-                                         for timestamp_s, predicted_emotions in emotions_audio_frames
-                                         if timestamp_s > timestamp_prev]
+                # If we aren't lagging exceeding threshold, we'd rather occasionally include data from a previous period
+                # than lose the data
+                # FIXME(TK): sanity check there is no data which is *too* old being included!
+                if skip_release_periods:
+                    emotions_video_frames = [(timestamp_s, predicted_emotions)
+                                             for timestamp_s, predicted_emotions in emotions_video_frames
+                                             if timestamp_s > timestamp_prev]
+                    emotions_audio_frames = [(timestamp_s, predicted_emotions)
+                                             for timestamp_s, predicted_emotions in emotions_audio_frames
+                                             if timestamp_s > timestamp_prev]
 
                 included_emotions_video_frames = [
                     predicted_emotions for timestamp_s, predicted_emotions in emotions_video_frames
@@ -433,7 +396,7 @@ class RewardFunction:
                     raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {self._config.s_video_coefficients.index}")
                 audio_reward = 0.0 if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum()
                 video_reward = 0.0 if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum()
-                combined_reward = self._config.wt_audio_overall * audio_reward + self._config.wt_video_overall * video_reward
+                combined_reward = self._config.audio_weights.overall * audio_reward + self._config.video_weights.overall * video_reward
 
                 if not math.isfinite(video_reward):
                     raise ValueError(f'video_reward is not finite! {video_reward}')

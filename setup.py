@@ -14,7 +14,7 @@ setup(
     url='https://github.com/TomKingsfordUoA/social-robotics-reward',
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['srr=social_robotics_reward.srr:main']
+        'console_scripts': ['srr=social_robotics_reward.cli:main']
     },
     include_package_data=True,
     install_requires=requirements,

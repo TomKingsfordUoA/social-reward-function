@@ -94,7 +94,7 @@ class WebcamFrameGenerator(VideoFrameGenerator):
 
 
 class VideoFileFrameGenerator(VideoFrameGenerator):
-    def __init__(self, file: str, target_fps: float, play_audio: bool = True) -> None:
+    def __init__(self, file: str, target_fps: float, play_audio: bool) -> None:
         super().__init__(target_fps=target_fps)
         self._file = file
         self._play_audio = play_audio

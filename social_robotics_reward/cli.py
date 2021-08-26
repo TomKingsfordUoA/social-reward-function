@@ -3,9 +3,11 @@ import asyncio
 import dataclasses
 import signal
 import time
-from typing import Any, Dict
+import typing
+from typing import Any
 
 import cv2  # type: ignore
+import dataclasses_json
 import numpy as np
 import yaml
 
@@ -15,31 +17,57 @@ from social_robotics_reward.sensors.audio import AudioFrameGenerator, Microphone
 from social_robotics_reward.sensors.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
     VideoFileFrameGenerator
 from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
-from social_robotics_reward.viz import RewardSignalVisualizer
+from social_robotics_reward.viz import RewardSignalVisualizer, RewardSignalVisualizerConstants
 
 
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class FileInputConfig:
+    path: str
+    play_audio: bool  # FIXME(TK): actually use this!
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class WebcamInputConfig:
+    pass
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class AudioInputConfig:
+    period_propn: float
+    segment_duration_s: float
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class VideoInputConfig:
+    target_fps: float
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class InputConfig:
+    audio: AudioInputConfig
+    video: VideoInputConfig
+
+    # FIXME(TK): ensure exactly one of these is set (i.e. not zero, not two)
+    file: typing.Optional[FileInputConfig] = dataclasses.field(default=None)
+    webcam: typing.Optional[WebcamInputConfig] = dataclasses.field(default=None)
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
 @dataclasses.dataclass(frozen=True)
 class Config:
-    reward_signal_constants: RewardSignalConfig
-
-    @staticmethod
-    def from_dict(d: Dict[str, Any]) -> 'Config':
-        return Config(
-            reward_signal_constants=RewardSignalConfig.from_dict(d['reward_signal']),
-        )
+    input: InputConfig
+    reward_signal: RewardSignalConfig
+    visualization: RewardSignalVisualizerConstants
 
 
 async def main_async() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file', type=str, required=False)
     parser.add_argument('--config', type=str, default='srr.yaml')
-    # TODO(TK): move most of these to config file
-    parser.add_argument('--viz_video_downsample_rate', type=int, default=1)
-    parser.add_argument('--viz_reward_window_width', type=float, default=30.0)
-    parser.add_argument('--viz_threshold_lag_s', type=float, default=10.0)
-    parser.add_argument('--audio_period_propn', type=float, default=0.25)
-    parser.add_argument('--audio_segment_duration_s', type=float, default=2.0)
-    parser.add_argument('--video_target_fps', type=float, default=0.5)
     args = parser.parse_args()
 
     def signal_handler(signum: Any, frame: Any) -> None:
@@ -48,32 +76,30 @@ async def main_async() -> None:
     signal.signal(signal.SIGINT, signal_handler)
 
     with open(args.config) as f_config:
-        config = Config.from_dict(yaml.load(f_config, Loader=yaml.CLoader))
+        dict_config = yaml.load(f_config, Loader=yaml.CLoader)
+        config = Config.from_dict(dict_config)
 
-    if args.file is not None:
+    if config.input.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
-            file=args.file,
-            segment_duration_s=args.audio_segment_duration_s,
-            period_propn=args.audio_period_propn,
+            file=config.input.file.path,
+            segment_duration_s=config.input.audio.segment_duration_s,
+            period_propn=config.input.audio.period_propn,
         )
         _video_frame_generator: VideoFrameGenerator = VideoFileFrameGenerator(
-            file=args.file,
-            target_fps=args.video_target_fps,
+            file=config.input.file.path,
+            target_fps=config.input.video.target_fps,
+            play_audio=config.input.file.play_audio,
         )
     else:
         _audio_frame_generator = MicrophoneFrameGenerator(
-            segment_duration_s=args.audio_segment_duration_s,
-            period_propn=args.audio_period_propn,
+            segment_duration_s=config.input.audio.segment_duration_s,
+            period_propn=config.input.audio.period_propn,
         )
         _video_frame_generator = WebcamFrameGenerator(
-            target_fps=args.video_target_fps,
+            target_fps=config.input.video.target_fps,
         )
-    _reward_function = RewardFunction(config.reward_signal_constants)
-    _plot_drawer = RewardSignalVisualizer(
-        reward_window_width=args.viz_reward_window_width,
-        video_downsample_rate=args.viz_video_downsample_rate,
-        threshold_lag_s=args.viz_threshold_lag_s,
-    )
+    _reward_function = RewardFunction(config=config.reward_signal)
+    _plot_drawer = RewardSignalVisualizer(config=config.visualization)
 
     with _audio_frame_generator as audio_frame_generator, \
             _video_frame_generator as video_frame_generator, \

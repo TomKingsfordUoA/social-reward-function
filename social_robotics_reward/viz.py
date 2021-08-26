@@ -1,9 +1,12 @@
+import dataclasses
 import functools
 import math
 import sys
 import time
+import typing
 from typing import Optional, List, Set, Any
 
+import dataclasses_json
 import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
@@ -12,11 +15,17 @@ from matplotlib.image import AxesImage  # type: ignore
 from social_robotics_reward.reward_function import RewardSignal
 
 
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass
+class RewardSignalVisualizerConstants:
+    reward_window_width_s: float
+    threshold_lag_s: float
+    moving_average_window_width_s: float
+
+
 class RewardSignalVisualizer:
-    def __init__(self, reward_window_width: float, video_downsample_rate: Optional[int], threshold_lag_s: float) -> None:
-        self._reward_window_width = reward_window_width
-        self._video_downsample_rate = video_downsample_rate
-        self._threshold_lag_s = threshold_lag_s
+    def __init__(self, config: RewardSignalVisualizerConstants) -> None:
+        self._config = config
 
         # Ensure frames are maximized:
         if matplotlib.get_backend() == 'TkAgg':
@@ -40,7 +49,6 @@ class RewardSignalVisualizer:
         self._min_observed_reward = -1.0
 
         # Moving average calculation:
-        self._moving_average_window_width_s = 240  # FIXME(TK): move this to config
         self._moving_average_window: List[RewardSignal] = []
 
     def __enter__(self) -> 'RewardSignalVisualizer':
@@ -69,7 +77,7 @@ class RewardSignalVisualizer:
         # Manage moving average:
         self._moving_average_window.append(reward_signal)
         self._moving_average_window = [elem for elem in self._moving_average_window
-                                       if reward_signal.timestamp_s - elem.timestamp_s <= self._moving_average_window_width_s]
+                                       if reward_signal.timestamp_s - elem.timestamp_s <= self._config.moving_average_window_width_s]
         average_reward_signal: Optional[RewardSignal]
         if len(self._moving_average_window) != 0:
             average_reward_signal = functools.reduce(RewardSignal.__add__, self._moving_average_window)
@@ -79,12 +87,12 @@ class RewardSignalVisualizer:
         print("average_reward_signal", average_reward_signal, flush=True)
 
         lag = time.time() - self._time_begin - reward_signal.timestamp_s
-        if lag > self._threshold_lag_s:
+        if lag > self._config.threshold_lag_s:
             print(f"reward signal viz falling behind! lag={lag:.2f}", file=sys.stderr)
 
         # Append the new reward signal and drop old data points:
         self._reward_signal.append(reward_signal)
-        self._reward_signal = [elem for elem in self._reward_signal if reward_signal.timestamp_s - elem.timestamp_s <= self._reward_window_width]
+        self._reward_signal = [elem for elem in self._reward_signal if reward_signal.timestamp_s - elem.timestamp_s <= self._config.reward_window_width_s]
 
         color_combined = '#ff0000'
         color_audio = '#007700'
@@ -117,7 +125,7 @@ class RewardSignalVisualizer:
             color=color_video,
             label='video')
 
-        timestamp_max = max(reward_signal.timestamp_s, self._reward_window_width)
+        timestamp_max = max(reward_signal.timestamp_s, self._config.reward_window_width_s)
         self._max_observed_reward = max(elem for elem in [
             self._max_observed_reward,
             np.max(reward_signal.combined_reward),  # type: ignore
@@ -131,7 +139,7 @@ class RewardSignalVisualizer:
             np.min(reward_signal.video_reward) if reward_signal.video_reward is not None else math.inf,  # type: ignore
         ] if elem is not None)
 
-        self._ax_reward.set_xlim(left=timestamp_max - self._reward_window_width, right=time.time() - self._time_begin)
+        self._ax_reward.set_xlim(left=timestamp_max - self._config.reward_window_width_s, right=time.time() - self._time_begin)
         self._ax_reward.set_ylim(bottom=self._min_observed_reward, top=self._max_observed_reward)
         self._ax_reward.set_title('Reward')
         self._ax_reward.set_ylabel('reward')
