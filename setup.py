@@ -18,5 +18,5 @@ setup(
     },
     include_package_data=True,
     install_requires=requirements,
-    python_requires='==3.7',
+    python_requires='>=3.7,<3.8',
 )
