@@ -9,10 +9,18 @@ import time
 import wave
 import typing
 
+import dataclasses_json
 import librosa  # type: ignore
 import pyaudio  # type: ignore
 
 from social_robotics_reward.util import CodeBlockTimer
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class AudioInputConfig:
+    period_propn: float
+    segment_duration_s: float
 
 
 @dataclasses.dataclass(frozen=True)

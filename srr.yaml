@@ -1,8 +1,9 @@
 input:
-#  webcam:
-  file:
-    path: '/path/to/video.mp4'
-    play_audio: true
+  webcam:
+    device_id: 0
+#  file:
+#    path: '/path/to/video.mp4'
+#    play_audio: true
   audio:
     period_propn: 0.25
     segment_duration_s: 2.0

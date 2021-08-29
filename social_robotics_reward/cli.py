@@ -12,37 +12,11 @@ import yaml
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
 from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
-    AudioFileFrameGenerator
+    AudioFileFrameGenerator, AudioInputConfig
 from social_robotics_reward.sensors.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
-    VideoFileFrameGenerator
+    VideoFileFrameGenerator, VideoInputConfig, FileInputConfig, WebcamInputConfig
 from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
 from social_robotics_reward.viz import RewardSignalVisualizer, RewardSignalVisualizerConstants
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class FileInputConfig:
-    path: str
-    play_audio: bool
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class WebcamInputConfig:
-    pass
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class AudioInputConfig:
-    period_propn: float
-    segment_duration_s: float
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class VideoInputConfig:
-    target_fps: float
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -50,10 +24,12 @@ class VideoInputConfig:
 class InputConfig:
     audio: AudioInputConfig
     video: VideoInputConfig
-
-    # FIXME(TK): ensure exactly one of these is set (i.e. not zero, not two)
     file: typing.Optional[FileInputConfig] = dataclasses.field(default=None)
     webcam: typing.Optional[WebcamInputConfig] = dataclasses.field(default=None)
+
+    def __post_init__(self) -> None:
+        if not ((self.file is None) ^ (self.webcam is None)):
+            raise ValueError("Exactly one of 'webcam' and 'file' must be specified")
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -85,18 +61,20 @@ async def main_async() -> None:
             period_propn=config.input.audio.period_propn,
         )
         _video_frame_generator: VideoFrameGenerator = VideoFileFrameGenerator(
-            file=config.input.file.path,
             target_fps=config.input.video.target_fps,
-            play_audio=config.input.file.play_audio,
+            config=config.input.file,
         )
-    else:
+    elif config.input.webcam is not None:
         _audio_frame_generator = MicrophoneFrameGenerator(
             segment_duration_s=config.input.audio.segment_duration_s,
             period_propn=config.input.audio.period_propn,
         )
         _video_frame_generator = WebcamFrameGenerator(
             target_fps=config.input.video.target_fps,
+            config=config.input.webcam,
         )
+    else:
+        raise ValueError("Exactly one of config.input.file and config.input.webcam must be non-None")
     _reward_function = RewardFunction(config=config.reward_signal)
     _plot_drawer = RewardSignalVisualizer(config=config.visualization)
 

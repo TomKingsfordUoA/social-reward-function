@@ -8,7 +8,27 @@ import time
 import typing
 
 import cv2  # type: ignore
+import dataclasses_json
 from ffpyplayer.player import MediaPlayer  # type: ignore
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class VideoInputConfig:
+    target_fps: float
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class FileInputConfig:
+    path: str
+    play_audio: bool
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
+class WebcamInputConfig:
+    device_id: int
 
 
 @dataclasses.dataclass
@@ -66,8 +86,12 @@ class VideoFrameGenerator(abc.ABC):
 
 
 class WebcamFrameGenerator(VideoFrameGenerator):
+    def __init__(self, target_fps: float, config: WebcamInputConfig) -> None:
+        super().__init__(target_fps=target_fps)
+        self._config = config
+
     def _gen(self) -> None:
-        cap = cv2.VideoCapture(0)  # noqa
+        cap = cv2.VideoCapture(self._config.device_id)  # noqa
         if not cap.isOpened():
             raise RuntimeError("Failed to open camera")
         timestamp_initial: typing.Optional[float] = None
@@ -94,23 +118,22 @@ class WebcamFrameGenerator(VideoFrameGenerator):
 
 
 class VideoFileFrameGenerator(VideoFrameGenerator):
-    def __init__(self, file: str, target_fps: float, play_audio: bool) -> None:
+    def __init__(self, target_fps: float, config: FileInputConfig) -> None:
         super().__init__(target_fps=target_fps)
-        self._file = file
-        self._play_audio = play_audio
+        self._config = config
 
-        if not os.path.exists(file):
-            raise FileNotFoundError(file)
+        if not os.path.exists(self._config.path):
+            raise FileNotFoundError(self._config.path)
 
     def _gen(self) -> None:
-        if self._play_audio:
+        if self._config.play_audio:
             # we need to assign to a variable, even if unused, to prevent MediaPlayer from being GC'd
             # TODO(TK): consider moving this to the audio file sensor
-            audio_player = MediaPlayer(self._file)  # noqa
+            audio_player = MediaPlayer(self._config.path)
             print("MediaPlayer (audio) loaded", flush=True)
         else:
             audio_player = None
-        cap = cv2.VideoCapture(self._file)  # noqa
+        cap = cv2.VideoCapture(self._config.path)
         if not cap.isOpened():
             raise RuntimeError("Failed to open video file!")
         print("VideoCapture file loaded", flush=True)
