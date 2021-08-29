@@ -2,32 +2,32 @@ input:
 #  webcam:
   file:
     path: '/path/to/video.mp4'
-    play_audio: false
+    play_audio: true
   audio:
     period_propn: 0.25
     segment_duration_s: 2.0
   video:
-    target_fps: 0.5
+    target_fps: 1.0
 reward_signal:
   audio_weights:
-    overall: 0.25
-    angry: -1.0
+    overall: 0.1
+    angry: -0.5
     disgusted: -1.0
     fearful: -1.0
     happy: 1.0
-    sad: -1.0
+    sad: -0.5
     surprised: 0.5
     neutral: 0.0
   video_weights:
-    overall: 0.75
-    angry: -1.0
+    overall: 0.9
+    angry: -0.5
     disgusted: -1.0
     fearful: -1.0
     happy: 1.0
-    sad: -1.0
+    sad: -0.5
     surprised: 0.5
     neutral: 0.0
-  period_s: 2.5
+  period_s: 2
   threshold_audio_power: 0.00001
   threshold_latency_s: 5.0
 visualization:

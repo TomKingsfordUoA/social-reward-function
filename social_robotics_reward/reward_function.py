@@ -394,10 +394,9 @@ class RewardFunction:
                     raise ValueError(f"Unexpected audio emotions: got {df_audio_emotions.columns} expected {self._config.s_audio_coefficients.index}")
                 if not df_video_emotions.empty and set(self._config.s_video_coefficients.index) != set(df_video_emotions.columns):
                     raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {self._config.s_video_coefficients.index}")
-                audio_reward = 0.0 if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum()
-                video_reward = 0.0 if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum()
+                audio_reward = 0.0 if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum(axis=1).mean()
+                video_reward = 0.0 if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum(axis=1).mean()
                 combined_reward = self._config.audio_weights.overall * audio_reward + self._config.video_weights.overall * video_reward
-
                 if not math.isfinite(video_reward):
                     raise ValueError(f'video_reward is not finite! {video_reward}')
                 if not math.isfinite(audio_reward):
