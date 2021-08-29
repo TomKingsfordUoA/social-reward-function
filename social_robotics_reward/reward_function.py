@@ -228,8 +228,8 @@ class RewardSignal:
             combined_reward=self.combined_reward / other,
             audio_reward=self.audio_reward / other if self.audio_reward is not None else None,
             video_reward=self.video_reward / other if self.video_reward is not None else None,
-            detected_audio_emotions=self.detected_audio_emotions / other,
-            detected_video_emotions=self.detected_video_emotions / other,
+            detected_audio_emotions=self.detected_audio_emotions,
+            detected_video_emotions=self.detected_video_emotions,
         )
 
     def __itruediv__(self, other: typing.Union[int, float]) -> 'RewardSignal':

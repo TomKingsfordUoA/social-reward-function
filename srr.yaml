@@ -1,7 +1,7 @@
 input:
 #  webcam:
   file:
-    path: './samples/youtube/clips/positive/topgun.mp4'
+    path: '/path/to/video.mp4'
     play_audio: false
   audio:
     period_propn: 0.25

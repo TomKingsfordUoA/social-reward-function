@@ -36,7 +36,8 @@ class RewardSignalVisualizer:
             mng.resize(*mng.window.maxsize())
 
         self._ax_reward = plt.subplot2grid((2, 2), (0, 0), rowspan=1, colspan=2)
-        self._ax_emotions = plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=2)
+        self._ax_emotions_live = plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=1)
+        self._ax_emotions_average = plt.subplot2grid((2, 2), (1, 1), rowspan=1, colspan=1)
 
         plt.show(block=False)
         plt.gcf().canvas.flush_events()
@@ -45,8 +46,7 @@ class RewardSignalVisualizer:
         self._video_frame_counter = 0
         self._axes_image: Optional[AxesImage] = None
         self._reward_signal: List[RewardSignal] = []
-        self._previously_observed_video_emotions: Set[str] = set()
-        self._previously_observed_audio_emotions: Set[str] = set()
+        self._observed_emotions: List[str] = []
         self._max_observed_audio_power = 5e-3
         self._max_observed_reward = 1.0
         self._min_observed_reward = -1.0
@@ -169,60 +169,54 @@ class RewardSignalVisualizer:
         self._ax_reward.set_xlabel('time')
         self._ax_reward.legend(loc='lower left')
 
-        mean_detected_video_emotions = reward_signal.detected_video_emotions.mean()
-        mean_detected_audio_emotions = reward_signal.detected_audio_emotions.mean()
+        mean_detected_video_emotions_this_frame = reward_signal.detected_video_emotions.mean()
+        mean_detected_audio_emotions_this_frame = reward_signal.detected_audio_emotions.mean()
+        mean_detected_video_emotions_all_frames = average_reward_signal.detected_video_emotions.mean()
+        mean_detected_audio_emotions_all_frames = average_reward_signal.detected_audio_emotions.mean()
 
-        self._previously_observed_video_emotions |= set(mean_detected_video_emotions.index)
-        self._previously_observed_audio_emotions |= set(mean_detected_audio_emotions.index)
+        self._observed_emotions = sorted(set(self._observed_emotions) | set(mean_detected_video_emotions_this_frame.index) | set(mean_detected_audio_emotions_this_frame.index))
 
-        video_emotions = {
-            'vid_' + emotion: mean_detected_video_emotions[emotion]
-            for emotion in mean_detected_video_emotions.index
-        }
-        video_emotions.update({
-            'vid_' + emotion: 0.0
-            for emotion in self._previously_observed_video_emotions - set(mean_detected_video_emotions.index)
-        })
-        audio_emotions = {
-            'aud_' + emotion: mean_detected_audio_emotions[emotion]
-            for emotion in mean_detected_audio_emotions.index
-        }
-        audio_emotions.update({
-            'aud_' + emotion: 0.0
-            for emotion in self._previously_observed_audio_emotions - set(mean_detected_audio_emotions.index)
-        })
-
-        n = 2
-        self._ax_emotions.clear()
-        self._ax_emotions.bar(
-            x=np.arange(len(video_emotions.keys())),
-            height=video_emotions.values(),
+        self._ax_emotions_live.clear()
+        self._ax_emotions_live.bar(
+            x=np.arange(len(self._observed_emotions)) - 0.25,
+            height=[mean_detected_video_emotions_this_frame[emotion] if emotion in mean_detected_video_emotions_this_frame else 0.0 for emotion in self._observed_emotions],
             color=color_video,
-            width=1.0 / n,
+            width=0.5,
+            label='video',
         )
-        self._ax_emotions.bar(
-            x=np.arange(len(video_emotions.keys())) + 1.0 / n,
-            height=average_reward_signal.detected_video_emotions.mean(),
+        self._ax_emotions_live.bar(
+            x=np.arange(len(self._observed_emotions)) + 0.25,
+            height=[mean_detected_audio_emotions_this_frame[emotion] if emotion in mean_detected_audio_emotions_this_frame else 0.0 for emotion in self._observed_emotions],
+            color=color_audio,
+            width=0.5,
+            label='audio'
+        )
+        self._ax_emotions_live.set_ylim(bottom=0.0, top=1.0)
+        self._ax_emotions_live.set_xticks(np.arange(len(self._observed_emotions)))
+        self._ax_emotions_live.set_xticklabels(self._observed_emotions)
+        self._ax_emotions_live.set_title('Detected Emotions (Live)')
+        self._ax_emotions_live.legend(loc='upper right')
+
+        self._ax_emotions_average.clear()
+        self._ax_emotions_average.bar(
+            x=np.arange(len(self._observed_emotions)) - 0.25,
+            height=[mean_detected_video_emotions_all_frames[emotion] if emotion in mean_detected_video_emotions_all_frames else 0.0 for emotion in self._observed_emotions],
             color=color_video,
-            width=1.0 / n,
-            hatch='x',
+            width=0.5,
+            label='video',
         )
-        self._ax_emotions.bar(
-            x=len(video_emotions.keys()) + np.arange(len(audio_emotions.keys())),
-            height=audio_emotions.values(),
+        self._ax_emotions_average.bar(
+            x=np.arange(len(self._observed_emotions)) + 0.25,
+            height=[mean_detected_audio_emotions_all_frames[emotion] if emotion in mean_detected_audio_emotions_all_frames else 0.0 for emotion in self._observed_emotions],
             color=color_audio,
-            width=1.0 / n,
+            width=0.5,
+            label='audio',
         )
-        self._ax_emotions.bar(
-            x=len(video_emotions.keys()) + np.arange(len(audio_emotions.keys())) + 1.0 / n,
-            height=average_reward_signal.detected_audio_emotions.mean(),
-            color=color_audio,
-            width=1.0 / n,
-            hatch='x',
-        )
-        self._ax_emotions.set_xticks(np.arange(len(video_emotions.keys()) + len(audio_emotions.keys())))
-        self._ax_emotions.set_xticklabels(list(video_emotions.keys()) + list(audio_emotions.keys()))
-        self._ax_emotions.set_title('Detected Emotions')
+        self._ax_emotions_average.set_ylim(bottom=0.0, top=1.0)
+        self._ax_emotions_average.set_xticks(np.arange(len(self._observed_emotions)))
+        self._ax_emotions_average.set_xticklabels(self._observed_emotions)
+        self._ax_emotions_average.set_title('Detected Emotions (Moving Average)')
+        self._ax_emotions_average.legend(loc='upper right')
 
         self._draw()
 
