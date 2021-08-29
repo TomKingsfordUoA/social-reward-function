@@ -8,7 +8,6 @@ from typing import Any
 
 import cv2  # type: ignore
 import dataclasses_json
-import numpy as np
 import yaml
 
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
@@ -24,7 +23,7 @@ from social_robotics_reward.viz import RewardSignalVisualizer, RewardSignalVisua
 @dataclasses.dataclass(frozen=True)
 class FileInputConfig:
     path: str
-    play_audio: bool  # FIXME(TK): actually use this!
+    play_audio: bool
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -135,25 +134,13 @@ async def main_async() -> None:
                 assert isinstance(tagged_item.item, VideoFrame)
                 # print(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} "
                 #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
-
-                # Display image frame:
-                # TODO(TK): bring back types with numpy>=1.20
-                displayable_image = np.copy(tagged_item.item.video_data)  # type: ignore
-                cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow('Video (live)', displayable_image)
-                cv2.waitKey(1)  # milliseconds
+                plot_drawer.draw_video_live(video_frame=tagged_item.item)
 
             elif _key_video_downsampled in tagged_item.tags:
                 assert isinstance(tagged_item.item, VideoFrame)
                 print(f"Got video frame (downsampled) - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
                 reward_function.push_video_frame(video_frame=tagged_item.item)
-
-                # Display image frame:
-                # TODO(TK): bring back types with numpy>=1.20
-                displayable_image = np.copy(tagged_item.item.video_data)  # type: ignore
-                cv2.putText(displayable_image, f"{tagged_item.item.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow('Video (downsampled)', displayable_image)
-                cv2.waitKey(1)  # milliseconds
+                plot_drawer.draw_video_downsampled(video_frame=tagged_item.item)
 
             elif _key_audio in tagged_item.tags:
                 assert isinstance(tagged_item.item, AudioFrame)

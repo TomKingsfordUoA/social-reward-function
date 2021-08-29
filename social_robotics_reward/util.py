@@ -8,6 +8,7 @@ from typing import TypeVar, Callable, AsyncGenerator, Any, Optional, Awaitable, 
 T = TypeVar('T')
 
 
+# FIXME(TK): Use generics
 @dataclasses.dataclass(frozen=True)
 class TaggedItem:
     tags: Tuple[str, ...]

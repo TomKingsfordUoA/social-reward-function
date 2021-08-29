@@ -34,3 +34,5 @@ visualization:
   reward_window_width_s: 30.0
   threshold_lag_s: 10.0
   moving_average_window_width_s: 240.0
+  display_video: true
+  display_plots: true

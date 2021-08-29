@@ -3,9 +3,9 @@ import functools
 import math
 import sys
 import time
-import typing
 from typing import Optional, List, Set, Any
 
+import cv2
 import dataclasses_json
 import matplotlib  # type: ignore
 import numpy as np
@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
 
 from social_robotics_reward.reward_function import RewardSignal
+from social_robotics_reward.sensors.video import VideoFrame
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -21,6 +22,8 @@ class RewardSignalVisualizerConstants:
     reward_window_width_s: float
     threshold_lag_s: float
     moving_average_window_width_s: float
+    display_video: bool
+    display_plots: bool
 
 
 class RewardSignalVisualizer:
@@ -63,6 +66,23 @@ class RewardSignalVisualizer:
         plt.show(block=False)
         plt.gcf().canvas.flush_events()
 
+    def _draw_video_frame(self, video_frame: VideoFrame, title: str) -> None:
+        if not self._config.display_video:
+            return
+
+        # TODO(TK): bring back types with numpy>=1.20
+        displayable_image = np.copy(video_frame.video_data)  # type: ignore
+        cv2.putText(displayable_image, f"{video_frame.timestamp_s:.2f}", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.imshow(title, displayable_image)
+        cv2.waitKey(1)  # milliseconds
+
+    def draw_video_live(self, video_frame: VideoFrame) -> None:
+        self._draw_video_frame(video_frame=video_frame, title='Video (live)')
+
+    def draw_video_downsampled(self, video_frame: VideoFrame) -> None:
+        self._draw_video_frame(video_frame=video_frame, title='Video (downsampled)')
+
+    # TODO(TK): This doesn't need to be async
     async def draw_reward_signal(
             self,
             reward_signal: RewardSignal,
@@ -70,6 +90,9 @@ class RewardSignalVisualizer:
         """
         Append and draw the latest RewardSignal
         """
+
+        if not self._config.display_plots:
+            return
 
         if self._time_begin is None:
             raise ValueError(f"{RewardSignalVisualizer.draw_reward_signal.__name__} called outside context manager")
