@@ -28,11 +28,11 @@ def test_interleave_fifo() -> None:
 
     result = asyncio.run(accumulate())
     assert result == [
-        TaggedItem(tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
-        TaggedItem(tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
-        TaggedItem(tags=('0',), item={'timestamp': 2.0, 'x': 2.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 2.0, 'x': 2.0}),
     ]
 
 
@@ -56,10 +56,10 @@ def test_interleave_fifo_stop_at_first() -> None:
 
     result = asyncio.run(accumulate())
     assert result == [
-        TaggedItem(tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
-        TaggedItem(tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
     ]
 
 
@@ -83,11 +83,11 @@ def test_interleave_fifo_stop_at_last() -> None:
 
     result = asyncio.run(accumulate())
     assert result == [
-        TaggedItem(tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
-        TaggedItem(tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 3.5, 'y': 2.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 4.5, 'y': 3.0}),
-        TaggedItem(tags=('1',), item={'timestamp': 5.5, 'y': 4.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 0.0, 'x': 0.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 1.5, 'y': 0.0}),
+        TaggedItem[dict](tags=('0',), item={'timestamp': 1.0, 'x': 1.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 2.5, 'y': 1.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 3.5, 'y': 2.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 4.5, 'y': 3.0}),
+        TaggedItem[dict](tags=('1',), item={'timestamp': 5.5, 'y': 4.0}),
     ]

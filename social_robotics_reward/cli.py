@@ -6,7 +6,6 @@ import time
 import typing
 from typing import Any
 
-import cv2  # type: ignore
 import dataclasses_json
 import yaml
 
@@ -52,7 +51,7 @@ async def main_async() -> None:
 
     with open(args.config) as f_config:
         dict_config = yaml.load(f_config, Loader=yaml.CLoader)
-        config = Config.from_dict(dict_config)
+        config = Config.from_dict(dict_config)  # type: ignore
 
     if config.input.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
@@ -89,7 +88,7 @@ async def main_async() -> None:
         _key_audio = 'audio'
         _key_sensors = 'sensors'
         _key_reward = 'reward'
-        gen_sensors = interleave_fifo(
+        gen_sensors: typing.AsyncGenerator[TaggedItem[typing.Union[VideoFrame, AudioFrame]], None] = interleave_fifo(
             {
                 _key_video_live: video_frame_generator.gen_async_live(),
                 _key_video_downsampled: video_frame_generator.gen_async_downsampled(),
@@ -98,9 +97,9 @@ async def main_async() -> None:
             stop_at_first=False,
         )
         gen_sensors = async_gen_callback_wrapper(gen_sensors, callback_async=reward_function.stop_async())
-        gen_combined = interleave_fifo(
+        gen_combined: typing.AsyncGenerator[TaggedItem[typing.Union[VideoFrame, AudioFrame, RewardSignal]], None] = interleave_fifo(
             {
-                _key_sensors: gen_sensors,
+                _key_sensors: typing.cast(typing.AsyncGenerator[typing.Union[VideoFrame, AudioFrame, RewardSignal], None], gen_sensors),
                 _key_reward: reward_function.gen_async(),
             },
             stop_at_first=False,

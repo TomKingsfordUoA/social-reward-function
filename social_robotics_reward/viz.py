@@ -3,9 +3,9 @@ import functools
 import math
 import sys
 import time
-from typing import Optional, List, Set, Any
+import typing
 
-import cv2
+import cv2  # type: ignore
 import dataclasses_json
 import matplotlib  # type: ignore
 import numpy as np
@@ -42,23 +42,23 @@ class RewardSignalVisualizer:
         plt.show(block=False)
         plt.gcf().canvas.flush_events()
 
-        self._time_begin: Optional[float] = None
+        self._time_begin: typing.Optional[float] = None
         self._video_frame_counter = 0
-        self._axes_image: Optional[AxesImage] = None
-        self._reward_signal: List[RewardSignal] = []
-        self._observed_emotions: List[str] = []
+        self._axes_image: typing.Optional[AxesImage] = None
+        self._reward_signal: typing.List[RewardSignal] = []
+        self._observed_emotions: typing.List[str] = []
         self._max_observed_audio_power = 5e-3
         self._max_observed_reward = 1.0
         self._min_observed_reward = -1.0
 
         # Moving average calculation:
-        self._moving_average_window: List[RewardSignal] = []
+        self._moving_average_window: typing.List[RewardSignal] = []
 
     def __enter__(self) -> 'RewardSignalVisualizer':
         self._time_begin = time.time()
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         pass
 
     def _draw(self) -> None:
@@ -101,7 +101,7 @@ class RewardSignalVisualizer:
         self._moving_average_window.append(reward_signal)
         self._moving_average_window = [elem for elem in self._moving_average_window
                                        if reward_signal.timestamp_s - elem.timestamp_s <= self._config.moving_average_window_width_s]
-        average_reward_signal: Optional[RewardSignal]
+        average_reward_signal: typing.Optional[RewardSignal]
         if len(self._moving_average_window) != 0:
             average_reward_signal = functools.reduce(RewardSignal.__add__, self._moving_average_window)
             average_reward_signal /= len(self._moving_average_window)
@@ -171,22 +171,33 @@ class RewardSignalVisualizer:
 
         mean_detected_video_emotions_this_frame = reward_signal.detected_video_emotions.mean()
         mean_detected_audio_emotions_this_frame = reward_signal.detected_audio_emotions.mean()
-        mean_detected_video_emotions_all_frames = average_reward_signal.detected_video_emotions.mean()
-        mean_detected_audio_emotions_all_frames = average_reward_signal.detected_audio_emotions.mean()
+        if average_reward_signal is not None:
+            # TODO(TK): use np.typing.ArrayLike when numpy>=1.20
+            mean_detected_video_emotions_all_frames: typing.Optional[typing.Any] = average_reward_signal.detected_video_emotions.mean()
+            mean_detected_audio_emotions_all_frames: typing.Optional[typing.Any] = average_reward_signal.detected_audio_emotions.mean()
+        else:
+            mean_detected_video_emotions_all_frames = None
+            mean_detected_audio_emotions_all_frames = None
 
-        self._observed_emotions = sorted(set(self._observed_emotions) | set(mean_detected_video_emotions_this_frame.index) | set(mean_detected_audio_emotions_this_frame.index))
+        self._observed_emotions = sorted(
+            set(self._observed_emotions) |
+            set(mean_detected_video_emotions_this_frame.index) |
+            set(mean_detected_audio_emotions_this_frame.index)
+        )
 
         self._ax_emotions_live.clear()
         self._ax_emotions_live.bar(
             x=np.arange(len(self._observed_emotions)) - 0.25,
-            height=[mean_detected_video_emotions_this_frame[emotion] if emotion in mean_detected_video_emotions_this_frame else 0.0 for emotion in self._observed_emotions],
+            height=[mean_detected_video_emotions_this_frame[emotion] if emotion in mean_detected_video_emotions_this_frame else 0.0
+                    for emotion in self._observed_emotions],
             color=color_video,
             width=0.5,
             label='video',
         )
         self._ax_emotions_live.bar(
             x=np.arange(len(self._observed_emotions)) + 0.25,
-            height=[mean_detected_audio_emotions_this_frame[emotion] if emotion in mean_detected_audio_emotions_this_frame else 0.0 for emotion in self._observed_emotions],
+            height=[mean_detected_audio_emotions_this_frame[emotion] if emotion in mean_detected_audio_emotions_this_frame else 0.0
+                    for emotion in self._observed_emotions],
             color=color_audio,
             width=0.5,
             label='audio'
@@ -198,20 +209,24 @@ class RewardSignalVisualizer:
         self._ax_emotions_live.legend(loc='upper right')
 
         self._ax_emotions_average.clear()
-        self._ax_emotions_average.bar(
-            x=np.arange(len(self._observed_emotions)) - 0.25,
-            height=[mean_detected_video_emotions_all_frames[emotion] if emotion in mean_detected_video_emotions_all_frames else 0.0 for emotion in self._observed_emotions],
-            color=color_video,
-            width=0.5,
-            label='video',
-        )
-        self._ax_emotions_average.bar(
-            x=np.arange(len(self._observed_emotions)) + 0.25,
-            height=[mean_detected_audio_emotions_all_frames[emotion] if emotion in mean_detected_audio_emotions_all_frames else 0.0 for emotion in self._observed_emotions],
-            color=color_audio,
-            width=0.5,
-            label='audio',
-        )
+        if mean_detected_video_emotions_all_frames is not None:
+            self._ax_emotions_average.bar(
+                x=np.arange(len(self._observed_emotions)) - 0.25,
+                height=[mean_detected_video_emotions_all_frames[emotion] if emotion in mean_detected_video_emotions_all_frames else 0.0
+                        for emotion in self._observed_emotions],
+                color=color_video,
+                width=0.5,
+                label='video',
+            )
+        if mean_detected_audio_emotions_all_frames is not None:
+            self._ax_emotions_average.bar(
+                x=np.arange(len(self._observed_emotions)) + 0.25,
+                height=[mean_detected_audio_emotions_all_frames[emotion] if emotion in mean_detected_audio_emotions_all_frames else 0.0
+                        for emotion in self._observed_emotions],
+                color=color_audio,
+                width=0.5,
+                label='audio',
+            )
         self._ax_emotions_average.set_ylim(bottom=0.0, top=1.0)
         self._ax_emotions_average.set_xticks(np.arange(len(self._observed_emotions)))
         self._ax_emotions_average.set_xticklabels(self._observed_emotions)

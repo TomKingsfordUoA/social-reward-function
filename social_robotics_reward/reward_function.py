@@ -349,7 +349,7 @@ class RewardFunction:
                 # Clean up skipped data:
                 # If we aren't lagging exceeding threshold, we'd rather occasionally include data from a previous period
                 # than lose the data
-                # FIXME(TK): sanity check there is no data which is *too* old being included!
+                # TODO(TK): sanity check there is no data which is *too* old being included!
                 if skip_release_periods:
                     emotions_video_frames = [(timestamp_s, predicted_emotions)
                                              for timestamp_s, predicted_emotions in emotions_video_frames
