@@ -16,8 +16,8 @@ import emotion_recognition_using_speech.emotion_recognition
 from mevonai_speech_emotion_recognition.src.speechEmotionRecognition import \
     EmotionRecognizer as MevonAiEmotionRecognizer
 from residual_masking_network.rmn import RMN
-from social_robotics_reward.sensors.audio import AudioFrame
-from social_robotics_reward.sensors.video import VideoFrame
+from social_robotics_reward.input.audio import AudioFrame
+from social_robotics_reward.input.video import VideoFrame
 from social_robotics_reward.util import CodeBlockTimer
 
 Timestamp = float

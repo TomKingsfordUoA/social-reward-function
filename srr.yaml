@@ -1,9 +1,9 @@
 input:
-  webcam:
-    device_id: 0
-#  file:
-#    path: '/path/to/video.mp4'
-#    play_audio: true
+#  webcam:
+#    device_id: 0
+  file:
+    path: '/path/to/video.mp4'
+    play_audio: true
   audio:
     period_propn: 0.25
     segment_duration_s: 2.0
@@ -31,9 +31,14 @@ reward_signal:
   period_s: 2
   threshold_audio_power: 0.00001
   threshold_latency_s: 5.0
-visualization:
-  reward_window_width_s: 30.0
-  threshold_lag_s: 10.0
-  moving_average_window_width_s: 240.0
-  display_video: true
-  display_plots: true
+output:
+  visualization:
+    reward_window_width_s: 30.0
+    threshold_lag_s: 10.0
+    moving_average_window_width_s: 240.0
+    display_video: true
+    display_plots: true
+  file:
+    enabled: true
+    path: output.yaml
+    overwrite: true

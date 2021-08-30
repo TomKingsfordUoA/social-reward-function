@@ -9,13 +9,14 @@ from typing import Any
 import dataclasses_json
 import yaml
 
+from social_robotics_reward.output.file import RewardSignalFileWriter, FileOutputConfig
 from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
-from social_robotics_reward.sensors.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
+from social_robotics_reward.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator, AudioInputConfig
-from social_robotics_reward.sensors.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
+from social_robotics_reward.input.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
     VideoFileFrameGenerator, VideoInputConfig, FileInputConfig, WebcamInputConfig
 from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
-from social_robotics_reward.viz import RewardSignalVisualizer, RewardSignalVisualizerConstants
+from social_robotics_reward.output.visualization import RewardSignalVisualizer, VisualizationOutputConfig
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -33,10 +34,17 @@ class InputConfig:
 
 @dataclasses_json.dataclass_json(undefined='raise')
 @dataclasses.dataclass(frozen=True)
+class OutputConfig:
+    visualization: VisualizationOutputConfig
+    file: FileOutputConfig
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
 class Config:
     input: InputConfig
     reward_signal: RewardSignalConfig
-    visualization: RewardSignalVisualizerConstants
+    output: OutputConfig
 
 
 async def main_async() -> None:
@@ -75,12 +83,14 @@ async def main_async() -> None:
     else:
         raise ValueError("Exactly one of config.input.file and config.input.webcam must be non-None")
     _reward_function = RewardFunction(config=config.reward_signal)
-    _plot_drawer = RewardSignalVisualizer(config=config.visualization)
+    _visualizer = RewardSignalVisualizer(config=config.output.visualization)
+    _file_writer = RewardSignalFileWriter(config=config.output.file)
 
     with _audio_frame_generator as audio_frame_generator, \
             _video_frame_generator as video_frame_generator, \
             _reward_function as reward_function, \
-            _plot_drawer as plot_drawer:
+            _visualizer as visualizer, \
+            _file_writer as file_writer:
 
         # Interleave and stop when gen_sensors finishes (as gen_reward_signal will go forever):
         _key_video_live = 'video_live'
@@ -111,13 +121,13 @@ async def main_async() -> None:
                 assert isinstance(tagged_item.item, VideoFrame)
                 # print(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} "
                 #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
-                plot_drawer.draw_video_live(video_frame=tagged_item.item)
+                visualizer.draw_video_live(video_frame=tagged_item.item)
 
             elif _key_video_downsampled in tagged_item.tags:
                 assert isinstance(tagged_item.item, VideoFrame)
                 print(f"Got video frame (downsampled) - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
                 reward_function.push_video_frame(video_frame=tagged_item.item)
-                plot_drawer.draw_video_downsampled(video_frame=tagged_item.item)
+                visualizer.draw_video_downsampled(video_frame=tagged_item.item)
 
             elif _key_audio in tagged_item.tags:
                 assert isinstance(tagged_item.item, AudioFrame)
@@ -128,13 +138,14 @@ async def main_async() -> None:
                 assert isinstance(tagged_item.item, RewardSignal)
                 print(f"Got reward signal - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
                 print(tagged_item.item)
-                await plot_drawer.draw_reward_signal(tagged_item.item)
+                await visualizer.draw_reward_signal(reward_signal=tagged_item.item)
+                file_writer.append_reward_signal(reward_signal=tagged_item.item)
 
             else:
                 raise RuntimeError(f"Unexpected {TaggedItem.__name__}: {tagged_item}")
 
         print("stopped")
-        plot_drawer.sustain()
+        visualizer.sustain()
 
 
 def main() -> None:

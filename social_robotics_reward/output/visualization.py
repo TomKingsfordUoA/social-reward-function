@@ -13,12 +13,12 @@ from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
 
 from social_robotics_reward.reward_function import RewardSignal
-from social_robotics_reward.sensors.video import VideoFrame
+from social_robotics_reward.input.video import VideoFrame
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
 @dataclasses.dataclass
-class RewardSignalVisualizerConstants:
+class VisualizationOutputConfig:
     reward_window_width_s: float
     threshold_lag_s: float
     moving_average_window_width_s: float
@@ -27,29 +27,30 @@ class RewardSignalVisualizerConstants:
 
 
 class RewardSignalVisualizer:
-    def __init__(self, config: RewardSignalVisualizerConstants) -> None:
+    def __init__(self, config: VisualizationOutputConfig) -> None:
         self._config = config
 
-        # Ensure frames are maximized:
-        if matplotlib.get_backend() == 'TkAgg':
-            mng = plt.get_current_fig_manager()
-            mng.resize(*mng.window.maxsize())
+        if self._config.display_plots:
+            # Ensure frames are maximized:
+            if matplotlib.get_backend() == 'TkAgg':
+                mng = plt.get_current_fig_manager()
+                mng.resize(*mng.window.maxsize())
 
-        self._ax_reward = plt.subplot2grid((2, 2), (0, 0), rowspan=1, colspan=2)
-        self._ax_emotions_live = plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=1)
-        self._ax_emotions_average = plt.subplot2grid((2, 2), (1, 1), rowspan=1, colspan=1)
+            self._ax_reward = plt.subplot2grid((2, 2), (0, 0), rowspan=1, colspan=2)
+            self._ax_emotions_live = plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=1)
+            self._ax_emotions_average = plt.subplot2grid((2, 2), (1, 1), rowspan=1, colspan=1)
 
-        plt.show(block=False)
-        plt.gcf().canvas.flush_events()
+            plt.show(block=False)
+            plt.gcf().canvas.flush_events()
 
-        self._time_begin: typing.Optional[float] = None
-        self._video_frame_counter = 0
-        self._axes_image: typing.Optional[AxesImage] = None
-        self._reward_signal: typing.List[RewardSignal] = []
-        self._observed_emotions: typing.List[str] = []
-        self._max_observed_audio_power = 5e-3
-        self._max_observed_reward = 1.0
-        self._min_observed_reward = -1.0
+            self._time_begin: typing.Optional[float] = None
+            self._video_frame_counter = 0
+            self._axes_image: typing.Optional[AxesImage] = None
+            self._reward_signal: typing.List[RewardSignal] = []
+            self._observed_emotions: typing.List[str] = []
+            self._max_observed_audio_power = 5e-3
+            self._max_observed_reward = 1.0
+            self._min_observed_reward = -1.0
 
         # Moving average calculation:
         self._moving_average_window: typing.List[RewardSignal] = []
@@ -62,9 +63,10 @@ class RewardSignalVisualizer:
         pass
 
     def _draw(self) -> None:
-        plt.gcf().canvas.flush_events()
-        plt.show(block=False)
-        plt.gcf().canvas.flush_events()
+        if self._config.display_plots:
+            plt.gcf().canvas.flush_events()
+            plt.show(block=False)
+            plt.gcf().canvas.flush_events()
 
     def _draw_video_frame(self, video_frame: VideoFrame, title: str) -> None:
         if not self._config.display_video:
