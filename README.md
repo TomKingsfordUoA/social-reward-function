@@ -1,4 +1,4 @@
-# :robot: Social Robotics Reward
+# :robot: Social Reward Function
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -20,10 +20,10 @@ For more information, please refer to **(insert citation)**
 
 To get started, run:
 
-    git clone --recurse-submodules git@github.com:TomKingsfordUoA/social-robotics-reward.git
-    cd social-robotics-reward
+    git clone --recurse-submodules git@github.com:TomKingsfordUoA/social-reward-function.git
+    cd social-reward-function
     pip install .
-    srr -h
+    srf -h
 
 To change branches and update submodules:
 

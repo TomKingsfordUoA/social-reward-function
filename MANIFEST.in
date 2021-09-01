@@ -1,6 +1,7 @@
 # added by check-manifest
 include *.txt
 include *.yaml
+exclude output.yaml
 recursive-include emotion_recognition_using_speech *.h5
 recursive-include emotion_recognition_using_speech *.npy
 recursive-include emotion_recognition_using_speech *.pickle
@@ -65,5 +66,5 @@ recursive-include residual_masking_network *.txt
 recursive-include residual_masking_network *.yaml
 recursive-include residual_masking_network *.yml
 recursive-include scripts *.sh
-recursive-include social_robotics_reward *.typed
+recursive-include social_reward_function *.typed
 recursive-include emotion_recognition_using_speech *.txt

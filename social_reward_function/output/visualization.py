@@ -12,8 +12,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
 
-from social_robotics_reward.reward_function import RewardSignal
-from social_robotics_reward.input.video import VideoFrame
+from social_reward_function.reward_function import RewardSignal
+from social_reward_function.input.video import VideoFrame
 
 
 @dataclasses_json.dataclass_json(undefined='raise')

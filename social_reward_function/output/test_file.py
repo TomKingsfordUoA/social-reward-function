@@ -4,12 +4,11 @@ import random
 import tempfile
 import typing
 
-import pandas as pd
+import pandas as pd  # type: ignore
 import pytest
-import yaml
 
-from social_robotics_reward.output.file import FileOutputConfig, RewardSignalFileWriter
-from social_robotics_reward.reward_function import RewardSignal
+from social_reward_function.output.file import FileOutputConfig, RewardSignalFileWriter
+from social_reward_function.reward_function import RewardSignal
 
 
 @pytest.fixture
@@ -38,6 +37,7 @@ def test_creates_file() -> None:
         config = FileOutputConfig(
             path=output_file,
             overwrite=True,
+            enabled=True,
         )
         assert not os.path.exists(output_file)
         with RewardSignalFileWriter(config=config):
@@ -57,6 +57,7 @@ def test_doesnt_overwrite_existing() -> None:
         config = FileOutputConfig(
             path=output_file,
             overwrite=False,
+            enabled=True,
         )
         with pytest.raises(FileExistsError):
             with RewardSignalFileWriter(config=config):
@@ -69,6 +70,7 @@ def test_write_reward_signal_summary_json(fake_reward_signal: typing.List[Reward
         config = FileOutputConfig(
             path=output_file,
             overwrite=True,
+            enabled=True,
         )
         assert not os.path.exists(output_file)
         with RewardSignalFileWriter(config=config) as file_writer:
@@ -102,6 +104,7 @@ def test_write_reward_signal_summary_yaml(fake_reward_signal: typing.List[Reward
         config = FileOutputConfig(
             path=output_file,
             overwrite=True,
+            enabled=True,
         )
         assert not os.path.exists(output_file)
         with RewardSignalFileWriter(config=config) as file_writer:
@@ -131,6 +134,7 @@ def test_write_reward_signal_unrecognised_type() -> None:
         config = FileOutputConfig(
             path=output_file,
             overwrite=True,
+            enabled=True,
         )
         with pytest.raises(ValueError):
             RewardSignalFileWriter(config=config)

@@ -2,7 +2,7 @@
 
 import asyncio
 
-from social_robotics_reward.util import interleave_fifo, TaggedItem
+from social_reward_function.util import interleave_fifo, TaggedItem
 
 
 def test_interleave_fifo() -> None:

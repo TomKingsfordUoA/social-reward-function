@@ -9,14 +9,14 @@ from typing import Any
 import dataclasses_json
 import yaml
 
-from social_robotics_reward.output.file import RewardSignalFileWriter, FileOutputConfig
-from social_robotics_reward.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
-from social_robotics_reward.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
+from social_reward_function.output.file import RewardSignalFileWriter, FileOutputConfig
+from social_reward_function.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
+from social_reward_function.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator, AudioInputConfig
-from social_robotics_reward.input.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
+from social_reward_function.input.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
     VideoFileFrameGenerator, VideoInputConfig, FileInputConfig, WebcamInputConfig
-from social_robotics_reward.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
-from social_robotics_reward.output.visualization import RewardSignalVisualizer, VisualizationOutputConfig
+from social_reward_function.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
+from social_reward_function.output.visualization import RewardSignalVisualizer, VisualizationOutputConfig
 
 
 @dataclasses_json.dataclass_json(undefined='raise')

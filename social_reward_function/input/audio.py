@@ -13,7 +13,7 @@ import dataclasses_json
 import librosa  # type: ignore
 import pyaudio  # type: ignore
 
-from social_robotics_reward.util import CodeBlockTimer
+from social_reward_function.util import CodeBlockTimer
 
 
 @dataclasses_json.dataclass_json(undefined='raise')

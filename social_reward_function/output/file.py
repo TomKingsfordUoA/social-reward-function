@@ -1,17 +1,15 @@
-import copy
 import dataclasses
 import enum
 import json
-import math
 import os
 import typing
 
 import dataclasses_json
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 import yaml
 
-from social_robotics_reward.reward_function import RewardSignal
+from social_reward_function.reward_function import RewardSignal
 
 
 @dataclasses_json.dataclass_json(undefined='raise')
@@ -83,12 +81,16 @@ class RewardSignalFileWriter:
             'summary': {
                 'reward': {
                     'mean_combined': float(np.mean([reward_signal.combined_reward for reward_signal in self._list_reward_signal])),
-                    'mean_video': float(np.mean([reward_signal.video_reward for reward_signal in self._list_reward_signal if reward_signal.video_reward is not None])),
-                    'mean_audio': float(np.mean([reward_signal.audio_reward for reward_signal in self._list_reward_signal if reward_signal.audio_reward is not None])),
+                    'mean_video': float(np.mean([reward_signal.video_reward for reward_signal in self._list_reward_signal
+                                                 if reward_signal.video_reward is not None])),
+                    'mean_audio': float(np.mean([reward_signal.audio_reward for reward_signal in self._list_reward_signal
+                                                 if reward_signal.audio_reward is not None])),
                 },
                 'emotions': {
-                    'mean_video': pd.concat([reward_signal.detected_video_emotions for reward_signal in self._list_reward_signal]).mean().to_dict() if len(self._list_reward_signal) != 0 else {},
-                    'mean_audio': pd.concat([reward_signal.detected_audio_emotions for reward_signal in self._list_reward_signal]).mean().to_dict() if len(self._list_reward_signal) != 0 else {},
+                    'mean_video': pd.concat([reward_signal.detected_video_emotions for reward_signal in self._list_reward_signal]).mean().to_dict()
+                    if len(self._list_reward_signal) != 0 else {},
+                    'mean_audio': pd.concat([reward_signal.detected_audio_emotions for reward_signal in self._list_reward_signal]).mean().to_dict()
+                    if len(self._list_reward_signal) != 0 else {},
                 }
             }
         }

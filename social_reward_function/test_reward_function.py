@@ -1,6 +1,6 @@
 import pandas as pd  # type: ignore
 
-from social_robotics_reward.reward_function import RewardSignalConfig, EmotionWeights
+from social_reward_function.reward_function import RewardSignalConfig, EmotionWeights
 
 
 def test_reward_function_constants_from_dict() -> None:

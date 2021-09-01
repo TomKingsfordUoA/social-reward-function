@@ -4,10 +4,10 @@ cd "$(dirname "$0")/.."
 set -e
 
 echo '=== Linting ==='
-flake8 social_robotics_reward *.py
+flake8 social_reward_function *.py
 
 echo '=== Static Type Checking ==='
-mypy --strict social_robotics_reward setup.py
+mypy --strict social_reward_function setup.py
 
 echo '=== Testing ==='
 pytest -v .
