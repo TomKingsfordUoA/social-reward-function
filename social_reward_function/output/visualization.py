@@ -122,6 +122,7 @@ class RewardSignalVisualizer:
         color_combined = '#ff0000'
         color_audio = '#007700'
         color_video = '#000077'
+        color_presence = '#777700'
 
         self._ax_reward.clear()
         self._ax_reward.axhline(y=0, color='k', alpha=0.5)  # x-axis
@@ -149,6 +150,12 @@ class RewardSignalVisualizer:
             marker='x',
             color=color_video,
             label='video')
+        self._ax_reward.plot(
+            [elem.timestamp_s for elem in self._reward_signal],
+            [elem.presence_reward for elem in self._reward_signal],
+            marker='x',
+            color=color_presence,
+            label='presence')
 
         timestamp_max = max(reward_signal.timestamp_s, self._config.reward_window_width_s)
         self._max_observed_reward = max(elem for elem in [
@@ -156,12 +163,14 @@ class RewardSignalVisualizer:
             np.max(reward_signal.combined_reward),  # type: ignore
             np.max(reward_signal.audio_reward) if reward_signal.audio_reward is not None else -math.inf,  # type: ignore
             np.max(reward_signal.video_reward) if reward_signal.video_reward is not None else -math.inf,  # type: ignore
+            np.max(reward_signal.presence_reward) if reward_signal.presence_reward is not None else -math.inf,  # type: ignore
         ] if elem is not None)
         self._min_observed_reward = min(elem for elem in [
             self._min_observed_reward,
             np.min(reward_signal.combined_reward),  # type: ignore
             np.min(reward_signal.audio_reward) if reward_signal.audio_reward is not None else math.inf,  # type: ignore
             np.min(reward_signal.video_reward) if reward_signal.video_reward is not None else math.inf,  # type: ignore
+            np.min(reward_signal.presence_reward) if reward_signal.presence_reward is not None else math.inf,  # type: ignore
         ] if elem is not None)
 
         self._ax_reward.set_xlim(left=timestamp_max - self._config.reward_window_width_s, right=time.time() - self._time_begin)

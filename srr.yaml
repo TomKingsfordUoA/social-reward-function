@@ -1,13 +1,9 @@
 input:
-#  webcam:
-#    device_id: 0
-  file:
-    # path: '/path/to/video.mp4'
-#    path: '/home/tom/Documents/projects/social_robotics_reward/samples/ravdess_handful/01-01-03-01-02-01-01_happy.mp4'
-    path: '/home/tom/Documents/projects/social_robotics_reward/samples/ravdess_handful/01-01-04-02-01-01-01_sad.mp4'
-#    path: '/home/tom/Documents/projects/social_robotics_reward/samples/ravdess_handful/01-01-07-01-02-01-01_disgust.mp4'
-#    path: '/home/tom/Documents/projects/social_robotics_reward/samples/ravdess_handful/01-01-06-02-02-02-01_fearful.mp4'
-    play_audio: false
+  webcam:
+    device_id: 0
+#  file:
+#    path: '/path/to/video.mp4'
+#    play_audio: true
   audio:
     period_propn: 0.25
     segment_duration_s: 2.0
@@ -32,6 +28,9 @@ reward_signal:
     sad: -0.5
     surprised: 0.5
     neutral: 0.0
+  presence_weights:
+    accompanied: 0.05
+    alone: 0.0
   period_s: 2
   threshold_audio_power: 0.00001
   threshold_latency_s: 5.0
@@ -40,8 +39,8 @@ output:
     reward_window_width_s: 30.0
     threshold_lag_s: 10.0
     moving_average_window_width_s: 240.0
-    display_video: false
-    display_plots: false
+    display_video: true
+    display_plots: true
   file:
     enabled: true
     path: output.yaml

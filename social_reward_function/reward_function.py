@@ -146,9 +146,17 @@ class EmotionWeights:
 
 @dataclasses_json.dataclass_json(undefined='raise')
 @dataclasses.dataclass(frozen=True)
+class PresenceWeights:
+    accompanied: float
+    alone: float
+
+
+@dataclasses_json.dataclass_json(undefined='raise')
+@dataclasses.dataclass(frozen=True)
 class RewardSignalConfig:
     audio_weights: EmotionWeights
     video_weights: EmotionWeights
+    presence_weights: PresenceWeights
     period_s: float
     threshold_audio_power: float
     threshold_latency_s: float
@@ -184,6 +192,8 @@ class RewardSignal:
     combined_reward: float
     audio_reward: typing.Optional[float]
     video_reward: typing.Optional[float]
+    presence_reward: float
+    human_detected: bool
     detected_audio_emotions: pd.DataFrame
     detected_video_emotions: pd.DataFrame
 
@@ -193,6 +203,8 @@ class RewardSignal:
                f"\tcombined_reward={self.combined_reward}\n" \
                f"\taudio_reward={self.audio_reward}\n"\
                f"\tvideo_reward={self.video_reward}\n" \
+               f"\tpresence_reward={self.presence_reward}\n" \
+               f"\thuman_detected={self.human_detected}\n" \
                f"\tdetected_audio_emotions=\n{self.detected_audio_emotions.mean()}\n" \
                f"\tdetected_video_emotions=\n{self.detected_video_emotions.mean()}\n" \
                f")"
@@ -215,6 +227,8 @@ class RewardSignal:
             combined_reward=self.combined_reward + other.combined_reward,
             audio_reward=audio_reward,
             video_reward=video_reward,
+            presence_reward=self.presence_reward + other.presence_reward,
+            human_detected=self.human_detected or other.human_detected,
             detected_audio_emotions=pd.concat([self.detected_audio_emotions, other.detected_audio_emotions]),
             detected_video_emotions=pd.concat([self.detected_video_emotions, other.detected_video_emotions]),
         )
@@ -228,6 +242,8 @@ class RewardSignal:
             combined_reward=self.combined_reward / other,
             audio_reward=self.audio_reward / other if self.audio_reward is not None else None,
             video_reward=self.video_reward / other if self.video_reward is not None else None,
+            presence_reward=self.presence_reward / other,
+            human_detected=self.human_detected,
             detected_audio_emotions=self.detected_audio_emotions,
             detected_video_emotions=self.detected_video_emotions,
         )
@@ -358,6 +374,9 @@ class RewardFunction:
                                              for timestamp_s, predicted_emotions in emotions_audio_frames
                                              if timestamp_s > timestamp_prev]
 
+                print("emotions_video_frames", emotions_video_frames)
+                print("emotions_audio_frames", emotions_audio_frames)
+
                 included_emotions_video_frames = [
                     predicted_emotions for timestamp_s, predicted_emotions in emotions_video_frames
                     if timestamp_s <= timestamp_next
@@ -396,7 +415,16 @@ class RewardFunction:
                     raise ValueError(f"Unexpected video emotions: got {df_video_emotions.columns} expected {self._config.s_video_coefficients.index}")
                 audio_reward = 0.0 if df_audio_emotions.empty else (self._config.s_audio_coefficients * df_audio_emotions).to_numpy().sum(axis=1).mean()
                 video_reward = 0.0 if df_video_emotions.empty else (self._config.s_video_coefficients * df_video_emotions).to_numpy().sum(axis=1).mean()
-                combined_reward = self._config.audio_weights.overall * audio_reward + self._config.video_weights.overall * video_reward
+                human_detected = not df_video_emotions.empty  # Only use video because audio is too prone to errors
+                presence_reward = (
+                    self._config.presence_weights.accompanied * float(human_detected) +
+                    self._config.presence_weights.alone * float(not human_detected)
+                )
+                combined_reward = (
+                    self._config.audio_weights.overall * audio_reward +
+                    self._config.video_weights.overall * video_reward +
+                    presence_reward
+                )
                 if not math.isfinite(video_reward):
                     raise ValueError(f'video_reward is not finite! {video_reward}')
                 if not math.isfinite(audio_reward):
@@ -409,6 +437,8 @@ class RewardFunction:
                     combined_reward=combined_reward,
                     video_reward=video_reward,
                     audio_reward=audio_reward,
+                    presence_reward=presence_reward,
+                    human_detected=human_detected,
                     detected_video_emotions=df_video_emotions,
                     detected_audio_emotions=df_audio_emotions,
                 ))
@@ -429,7 +459,6 @@ class RewardFunction:
                         (frame.timestamp_s, video_classifier.detect_emotion_for_single_frame(frame.video_data))
                         for frame in buffer_video_frames
                     ]
-                    print("emotions_video_frames_new", emotions_video_frames_new)
                     emotions_video_frames.extend(emotions_video_frames_new)
             if len(buffer_video_frames) != 0:
                 print(f'Video prediction took {timer.timedelta} '
@@ -443,7 +472,6 @@ class RewardFunction:
                         (frame.timestamp_s, audio_classifier.predict_proba(audio_data=frame.audio_data, sample_rate=frame.sample_rate))
                         for frame in buffer_audio_frames
                     ]
-                    print("emotions_audio_frames_new", emotions_audio_frames_new)
                     emotions_audio_frames.extend(emotions_audio_frames_new)
             if len(buffer_audio_frames) != 0:
                 print(f'Audio prediction took {timer.timedelta}')
