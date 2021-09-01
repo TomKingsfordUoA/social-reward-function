@@ -425,10 +425,12 @@ class RewardFunction:
             # Emotion predictions:
             with CodeBlockTimer() as timer:
                 for video_classifier in _video_classifiers:
-                    emotions_video_frames += [
+                    emotions_video_frames_new = [
                         (frame.timestamp_s, video_classifier.detect_emotion_for_single_frame(frame.video_data))
                         for frame in buffer_video_frames
                     ]
+                    print("emotions_video_frames_new", emotions_video_frames_new)
+                    emotions_video_frames.extend(emotions_video_frames_new)
             if len(buffer_video_frames) != 0:
                 print(f'Video prediction took {timer.timedelta} '
                       f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
@@ -437,10 +439,12 @@ class RewardFunction:
             buffer_audio_frames = [frame for frame in buffer_audio_frames if np.mean(np.power(frame.audio_data, 2)) >= self._config.threshold_audio_power]
             with CodeBlockTimer() as timer:
                 for audio_classifier in _audio_classifiers:
-                    emotions_audio_frames += [
+                    emotions_audio_frames_new = [
                         (frame.timestamp_s, audio_classifier.predict_proba(audio_data=frame.audio_data, sample_rate=frame.sample_rate))
                         for frame in buffer_audio_frames
                     ]
+                    print("emotions_audio_frames_new", emotions_audio_frames_new)
+                    emotions_audio_frames.extend(emotions_audio_frames_new)
             if len(buffer_audio_frames) != 0:
                 print(f'Audio prediction took {timer.timedelta}')
             buffer_audio_frames.clear()
