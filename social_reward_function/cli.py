@@ -49,7 +49,7 @@ class Config:
 
 async def main_async() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='srr.yaml')
+    parser.add_argument('--config', type=str, default='srf.yaml')
     args = parser.parse_args()
 
     def signal_handler(signum: Any, frame: Any) -> None:
