@@ -22,15 +22,18 @@ To get started, run:
 
     git clone --recurse-submodules git@github.com:TomKingsfordUoA/social-reward-function.git
     cd social-reward-function
-    sudo ./install_system_dependencies.sh
+    sudo ./install_system_dependencies.sh 
     pip install .
     srf -h
 
 To change branches and update submodules:
 
-
     git checkout <branch>
     git submodule update --init
+
+To run tests:
+
+    ./scripts/test.sh
 
 ## Known Limitations
 

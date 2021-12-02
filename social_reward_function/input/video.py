@@ -8,27 +8,9 @@ import time
 import typing
 
 import cv2  # type: ignore
-import dataclasses_json
 from ffpyplayer.player import MediaPlayer  # type: ignore
 
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class VideoInputConfig:
-    target_fps: float
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class FileInputConfig:
-    path: str
-    play_audio: bool
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class WebcamInputConfig:
-    device_id: int
+from social_reward_function.config import WebcamInputConfig, FileInputConfig
 
 
 @dataclasses.dataclass

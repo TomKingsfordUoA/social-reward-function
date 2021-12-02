@@ -8,7 +8,6 @@ import sys
 import time
 import typing
 
-import dataclasses_json
 import numpy as np
 import pandas as pd  # type: ignore
 
@@ -16,6 +15,7 @@ import emotion_recognition_using_speech.emotion_recognition
 from mevonai_speech_emotion_recognition.src.speechEmotionRecognition import \
     EmotionRecognizer as MevonAiEmotionRecognizer
 from residual_masking_network.rmn import RMN
+from social_reward_function.config import RewardSignalConfig
 from social_reward_function.input.audio import AudioFrame
 from social_reward_function.input.video import VideoFrame
 from social_reward_function.util import CodeBlockTimer
@@ -129,61 +129,6 @@ class ERUSAudioEmotionRecognizer(AudioEmotionRecognizer):
             neutral=emotion_probabilities['neutral'],
             sad=emotion_probabilities['sad'],
         )
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class EmotionWeights:
-    overall: float
-    angry: float
-    disgusted: float
-    fearful: float
-    happy: float
-    sad: float
-    surprised: float
-    neutral: float
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class PresenceWeights:
-    accompanied: float
-    alone: float
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class RewardSignalConfig:
-    audio_weights: EmotionWeights
-    video_weights: EmotionWeights
-    presence_weights: PresenceWeights
-    period_s: float
-    threshold_audio_power: float
-    threshold_latency_s: float
-
-    @property
-    def s_video_coefficients(self) -> pd.Series:
-        return pd.Series({
-            'angry': self.video_weights.angry,
-            'disgusted': self.video_weights.disgusted,
-            'fearful': self.video_weights.fearful,
-            'happy': self.video_weights.happy,
-            'sad': self.video_weights.sad,
-            'surprised': self.video_weights.surprised,
-            'neutral': self.video_weights.neutral,
-        })
-
-    @property
-    def s_audio_coefficients(self) -> pd.Series:
-        return pd.Series({
-            'angry': self.audio_weights.angry,
-            'disgusted': self.audio_weights.disgusted,
-            'fearful': self.audio_weights.fearful,
-            'happy': self.audio_weights.happy,
-            'sad': self.audio_weights.sad,
-            'surprised': self.audio_weights.surprised,
-            'neutral': self.audio_weights.neutral,
-        })
 
 
 @dataclasses.dataclass(frozen=True)

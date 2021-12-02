@@ -1,6 +1,6 @@
 import pandas as pd  # type: ignore
 
-from social_reward_function.reward_function import RewardSignalConfig, EmotionWeights
+from social_reward_function.config import RewardSignalConfig, EmotionWeights, PresenceWeights
 
 
 def test_reward_function_constants_from_dict() -> None:
@@ -24,6 +24,10 @@ def test_reward_function_constants_from_dict() -> None:
             'sad': -1.0,
             'surprised': 0.0,
             'neutral': 0.0,
+        },
+        'presence_weights': {
+            'accompanied': 0.1,
+            'alone': 0.0,
         },
         'period_s': 2.0,
         'threshold_audio_power': 0.01,
@@ -50,6 +54,10 @@ def test_reward_function_constants_from_dict() -> None:
             sad=-1.0,
             surprised=0.0,
             neutral=0.0,
+        ),
+        presence_weights=PresenceWeights(
+            accompanied=0.1,
+            alone=0.0,
         ),
         period_s=2.0,
         threshold_audio_power=0.01,
@@ -79,6 +87,10 @@ def test_reward_function_constants_series() -> None:
             sad=-1.0,
             surprised=0.0,
             neutral=0.0,
+        ),
+        presence_weights=PresenceWeights(
+            accompanied=0.1,
+            alone=0.0,
         ),
         period_s=2.0,
         threshold_audio_power=0.01,

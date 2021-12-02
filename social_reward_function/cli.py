@@ -1,50 +1,21 @@
 import argparse
 import asyncio
-import dataclasses
 import signal
 import time
 import typing
 from typing import Any
 
-import dataclasses_json
 import yaml
 
-from social_reward_function.output.file import RewardSignalFileWriter, FileOutputConfig
-from social_reward_function.reward_function import RewardFunction, RewardSignal, RewardSignalConfig
+from social_reward_function.output.file import RewardSignalFileWriter
+from social_reward_function.reward_function import RewardFunction, RewardSignal
 from social_reward_function.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
-    AudioFileFrameGenerator, AudioInputConfig
+    AudioFileFrameGenerator
 from social_reward_function.input.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
-    VideoFileFrameGenerator, VideoInputConfig, FileInputConfig, WebcamInputConfig
+    VideoFileFrameGenerator
 from social_reward_function.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
-from social_reward_function.output.visualization import RewardSignalVisualizer, VisualizationOutputConfig
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class InputConfig:
-    audio: AudioInputConfig
-    video: VideoInputConfig
-    file: typing.Optional[FileInputConfig] = dataclasses.field(default=None)
-    webcam: typing.Optional[WebcamInputConfig] = dataclasses.field(default=None)
-
-    def __post_init__(self) -> None:
-        if not ((self.file is None) ^ (self.webcam is None)):
-            raise ValueError("Exactly one of 'webcam' and 'file' must be specified")
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class OutputConfig:
-    visualization: VisualizationOutputConfig
-    file: FileOutputConfig
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class Config:
-    input: InputConfig
-    reward_signal: RewardSignalConfig
-    output: OutputConfig
+from social_reward_function.output.visualization import RewardSignalVisualizer
+from social_reward_function.config import Config
 
 
 async def main_async() -> None:
@@ -61,7 +32,7 @@ async def main_async() -> None:
         dict_config = yaml.load(f_config, Loader=yaml.CLoader)
         config = Config.from_dict(dict_config)  # type: ignore
 
-    if config.input.file is not None:
+    if config.input.source.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
             file=config.input.file.path,
             segment_duration_s=config.input.audio.segment_duration_s,
@@ -71,7 +42,7 @@ async def main_async() -> None:
             target_fps=config.input.video.target_fps,
             config=config.input.file,
         )
-    elif config.input.webcam is not None:
+    elif config.input.source.webcam is not None:
         _audio_frame_generator = MicrophoneFrameGenerator(
             segment_duration_s=config.input.audio.segment_duration_s,
             period_propn=config.input.audio.period_propn,
@@ -80,8 +51,11 @@ async def main_async() -> None:
             target_fps=config.input.video.target_fps,
             config=config.input.webcam,
         )
+    elif config.input.source.dataset is not None:
+        raise NotImplementedError()  # FIXME(TK): implement
     else:
-        raise ValueError("Exactly one of config.input.file and config.input.webcam must be non-None")
+        raise ValueError("Malformed config encountered")
+
     _reward_function = RewardFunction(config=config.reward_signal)
     _visualizer = RewardSignalVisualizer(config=config.output.visualization)
     _file_writer = RewardSignalFileWriter(config=config.output.file)

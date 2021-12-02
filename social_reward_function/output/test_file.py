@@ -7,7 +7,8 @@ import typing
 import pandas as pd  # type: ignore
 import pytest
 
-from social_reward_function.output.file import FileOutputConfig, RewardSignalFileWriter
+from social_reward_function.config import FileOutputConfig
+from social_reward_function.output.file import RewardSignalFileWriter
 from social_reward_function.reward_function import RewardSignal
 
 
@@ -20,6 +21,8 @@ def fake_reward_signal() -> typing.List[RewardSignal]:
             combined_reward=random.random(),
             audio_reward=random.random(),
             video_reward=random.random(),
+            presence_reward=random.random(),
+            human_detected=random.random() > 0.5,
             detected_video_emotions=pd.DataFrame(data=[
                 {'a': random.random(), 'b': random.random()} for _ in range(5)
             ]),
@@ -80,22 +83,11 @@ def test_write_reward_signal_summary_json(fake_reward_signal: typing.List[Reward
         with open(output_file) as f_output_file:
             json_output_file = json.load(f_output_file)
             assert json_output_file['summary'] == {
-                'reward': {
-                    'mean_combined': 0.2986359092264648,
-                    'mean_video': 0.41576943591538207,
-                    'mean_audio': 0.42006581017984673,
-                },
-                'emotions': {
-                    'mean_video': {
-                        'a': 0.46889227456526855,
-                        'b': 0.4580541635040654,
-                    },
-                    'mean_audio': {
-                        'c': 0.48354841541585536,
-                        'd': 0.5015684367141928,
-                    }
-                }
-            }
+                'emotions': {'mean_audio': {'c': 0.4051134271987294, 'd': 0.4420835460234761},
+                             'mean_video': {'a': 0.5301972027333712, 'b': 0.5589190670523739}},
+                'reward': {'mean_audio': 0.10908787645810085,
+                           'mean_combined': 0.44873410356246435,
+                           'mean_video': 0.21290783908389888}}
 
 
 def test_write_reward_signal_summary_yaml(fake_reward_signal: typing.List[RewardSignal]) -> None:
@@ -117,15 +109,15 @@ def test_write_reward_signal_summary_yaml(fake_reward_signal: typing.List[Reward
                 'summary:\n' \
                 '  emotions:\n' \
                 '    mean_audio:\n' \
-                '      c: 0.48354841541585536\n' \
-                '      d: 0.5015684367141928\n' \
+                '      c: 0.4051134271987294\n' \
+                '      d: 0.4420835460234761\n' \
                 '    mean_video:\n' \
-                '      a: 0.46889227456526855\n' \
-                '      b: 0.4580541635040654\n' \
+                '      a: 0.5301972027333712\n' \
+                '      b: 0.5589190670523739\n' \
                 '  reward:\n' \
-                '    mean_audio: 0.42006581017984673\n' \
-                '    mean_combined: 0.2986359092264648\n' \
-                '    mean_video: 0.41576943591538207\n'
+                '    mean_audio: 0.10908787645810085\n' \
+                '    mean_combined: 0.44873410356246435\n' \
+                '    mean_video: 0.21290783908389888\n'
 
 
 def test_write_reward_signal_unrecognised_type() -> None:

@@ -1,4 +1,3 @@
-import dataclasses
 import functools
 import math
 import sys
@@ -6,24 +5,14 @@ import time
 import typing
 
 import cv2  # type: ignore
-import dataclasses_json
 import matplotlib  # type: ignore
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage  # type: ignore
 
-from social_reward_function.reward_function import RewardSignal
+from social_reward_function.config import VisualizationOutputConfig
 from social_reward_function.input.video import VideoFrame
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass
-class VisualizationOutputConfig:
-    reward_window_width_s: float
-    threshold_lag_s: float
-    moving_average_window_width_s: float
-    display_video: bool
-    display_plots: bool
+from social_reward_function.reward_function import RewardSignal
 
 
 class RewardSignalVisualizer:

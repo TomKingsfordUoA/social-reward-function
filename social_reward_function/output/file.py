@@ -1,23 +1,14 @@
-import dataclasses
 import enum
 import json
 import os
 import typing
 
-import dataclasses_json
 import numpy as np
 import pandas as pd  # type: ignore
 import yaml
 
+from social_reward_function.config import FileOutputConfig
 from social_reward_function.reward_function import RewardSignal
-
-
-@dataclasses_json.dataclass_json(undefined='raise')
-@dataclasses.dataclass(frozen=True)
-class FileOutputConfig:
-    enabled: bool
-    path: str
-    overwrite: bool
 
 
 class RewardSignalFileWriter:
