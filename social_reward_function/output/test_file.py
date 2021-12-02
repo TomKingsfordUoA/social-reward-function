@@ -38,7 +38,8 @@ def test_creates_file() -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_file = os.path.join(tmp_dir, 'output.json')
         config = FileOutputConfig(
-            path=output_file,
+            path=str(tmp_dir),
+            format='json',
             overwrite=True,
             enabled=True,
         )
@@ -59,6 +60,7 @@ def test_doesnt_overwrite_existing() -> None:
 
         config = FileOutputConfig(
             path=output_file,
+            format='yaml',
             overwrite=False,
             enabled=True,
         )
@@ -71,7 +73,8 @@ def test_write_reward_signal_summary_json(fake_reward_signal: typing.List[Reward
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_file = os.path.join(tmp_dir, 'output.json')
         config = FileOutputConfig(
-            path=output_file,
+            path=tmp_dir,
+            format='json',
             overwrite=True,
             enabled=True,
         )
@@ -83,18 +86,25 @@ def test_write_reward_signal_summary_json(fake_reward_signal: typing.List[Reward
         with open(output_file) as f_output_file:
             json_output_file = json.load(f_output_file)
             assert json_output_file['summary'] == {
-                'emotions': {'mean_audio': {'c': 0.4051134271987294, 'd': 0.4420835460234761},
-                             'mean_video': {'a': 0.5301972027333712, 'b': 0.5589190670523739}},
-                'reward': {'mean_audio': 0.10908787645810085,
-                           'mean_combined': 0.44873410356246435,
-                           'mean_video': 0.21290783908389888}}
+                'emotions': {
+                    'mean_audio': {'c': 0.4051134271987294, 'd': 0.4420835460234761},
+                    'mean_video': {'a': 0.5301972027333712, 'b': 0.5589190670523739}
+                },
+                'reward': {
+                    'mean_audio': 0.10908787645810085,
+                    'mean_combined': 0.44873410356246435,
+                    'mean_video': 0.21290783908389888,
+                    'mean_presence': 0.6691198974029255,
+                }
+            }
 
 
 def test_write_reward_signal_summary_yaml(fake_reward_signal: typing.List[RewardSignal]) -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_file = os.path.join(tmp_dir, 'output.yaml')
         config = FileOutputConfig(
-            path=output_file,
+            path=tmp_dir,
+            format='yaml',
             overwrite=True,
             enabled=True,
         )
@@ -117,14 +127,15 @@ def test_write_reward_signal_summary_yaml(fake_reward_signal: typing.List[Reward
                 '  reward:\n' \
                 '    mean_audio: 0.10908787645810085\n' \
                 '    mean_combined: 0.44873410356246435\n' \
+                '    mean_presence: 0.6691198974029255\n' \
                 '    mean_video: 0.21290783908389888\n'
 
 
 def test_write_reward_signal_unrecognised_type() -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
-        output_file = os.path.join(tmp_dir, 'output.txt')
         config = FileOutputConfig(
-            path=output_file,
+            path=tmp_dir,
+            format='yaml2',
             overwrite=True,
             enabled=True,
         )

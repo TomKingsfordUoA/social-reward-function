@@ -72,6 +72,7 @@ class AudioInputConfig:
 class FileOutputConfig:
     enabled: bool
     path: str
+    format: str
     overwrite: bool
 
 
@@ -118,7 +119,7 @@ class InputSourceConfig:
     dataset: typing.Optional[DatasetInputConfig] = dataclasses.field(default=None)
 
     def __post_init__(self) -> None:
-        if not ((self.file is None) ^ (self.webcam is None) ^ (self.dataset is None)):
+        if not ((self.file is not None) ^ (self.webcam is not None) ^ (self.dataset is not None)):
             raise ValueError("Exactly one of 'webcam', 'file' and 'dataset' must be specified")
 
 

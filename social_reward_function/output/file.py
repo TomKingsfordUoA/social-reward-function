@@ -1,6 +1,7 @@
 import enum
 import json
 import os
+import pathlib
 import typing
 
 import numpy as np
@@ -18,11 +19,11 @@ class RewardSignalFileWriter:
 
         @staticmethod
         def get_json_suffixes() -> typing.Iterable[str]:
-            return {'.json'}
+            return {'json'}
 
         @staticmethod
         def get_yaml_suffixes() -> typing.Iterable[str]:
-            return {'.yaml', '.yml'}
+            return {'yaml', 'yml'}
 
     def __init__(self, config: FileOutputConfig) -> None:
         self._config = config
@@ -31,14 +32,16 @@ class RewardSignalFileWriter:
         if self._config.enabled:
             self._output_file_type = self._get_output_file_type()
             if not self._config.overwrite and os.path.exists(self._config.path):
-                raise FileExistsError(f'Output file already exists: {self._config.path}')
+                raise FileExistsError(f'Output dir already exists: {self._config.path}')
 
         self._list_reward_signal: typing.List[RewardSignal] = []
+        self._output_file = pathlib.Path(self._config.path).joinpath(f'output.{self._get_output_file_type().value}')
         self._f_output_file: typing.Optional[typing.TextIO] = None
 
     def __enter__(self) -> 'RewardSignalFileWriter':
         if self._config.enabled:
-            self._f_output_file = open(self._config.path, 'w').__enter__()
+            self._output_file.parent.mkdir(parents=True, exist_ok=True)
+            self._f_output_file = self._output_file.open('w').__enter__()
         return self
 
     def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
@@ -59,29 +62,25 @@ class RewardSignalFileWriter:
                 self._f_output_file.__exit__(exc_type, exc_val, exc_tb)
 
     def _get_output_file_type(self) -> OutputFileType:
-        filename, extension = os.path.splitext(self._config.path)
-        if extension.lower() in RewardSignalFileWriter.OutputFileType.get_yaml_suffixes():
+        if self._config.format.lower() in RewardSignalFileWriter.OutputFileType.get_yaml_suffixes():
             return RewardSignalFileWriter.OutputFileType.YAML
-        elif extension.lower() in RewardSignalFileWriter.OutputFileType.get_json_suffixes():
+        elif self._config.format.lower() in RewardSignalFileWriter.OutputFileType.get_json_suffixes():
             return RewardSignalFileWriter.OutputFileType.JSON
         else:
-            raise ValueError(f"Unexpected suffix encountered in output file: {self._config.path}")
+            raise ValueError(f"Unexpected suffix encountered in config: {self._config.format}")
 
     def _generate_file_content(self) -> typing.Dict[str, typing.Any]:
         return {
             'summary': {
                 'reward': {
                     'mean_combined': float(np.mean([reward_signal.combined_reward for reward_signal in self._list_reward_signal])),
-                    'mean_video': float(np.mean([reward_signal.video_reward for reward_signal in self._list_reward_signal
-                                                 if reward_signal.video_reward is not None])),
-                    'mean_audio': float(np.mean([reward_signal.audio_reward for reward_signal in self._list_reward_signal
-                                                 if reward_signal.audio_reward is not None])),
+                    'mean_video': float(np.mean([reward_signal.video_reward for reward_signal in self._list_reward_signal if reward_signal.video_reward is not None])),
+                    'mean_audio': float(np.mean([reward_signal.audio_reward for reward_signal in self._list_reward_signal if reward_signal.audio_reward is not None])),
+                    'mean_presence': float(np.mean([reward_signal.presence_reward for reward_signal in self._list_reward_signal if reward_signal.audio_reward is not None])),
                 },
                 'emotions': {
-                    'mean_video': pd.concat([reward_signal.detected_video_emotions for reward_signal in self._list_reward_signal]).mean().to_dict()
-                    if len(self._list_reward_signal) != 0 else {},
-                    'mean_audio': pd.concat([reward_signal.detected_audio_emotions for reward_signal in self._list_reward_signal]).mean().to_dict()
-                    if len(self._list_reward_signal) != 0 else {},
+                    'mean_video': pd.concat([reward_signal.detected_video_emotions for reward_signal in self._list_reward_signal]).mean().to_dict() if len(self._list_reward_signal) != 0 else {},
+                    'mean_audio': pd.concat([reward_signal.detected_audio_emotions for reward_signal in self._list_reward_signal]).mean().to_dict() if len(self._list_reward_signal) != 0 else {},
                 }
             }
         }

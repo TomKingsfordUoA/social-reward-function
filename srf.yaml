@@ -46,5 +46,6 @@ output:
     display_plots: true
   file:
     enabled: true
-    path: output.yaml
+    path: output
+    format: yaml
     overwrite: true
