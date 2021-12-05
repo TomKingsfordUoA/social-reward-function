@@ -1,6 +1,7 @@
 import asyncio
 import ctypes
 import dataclasses
+import logging
 import math
 import multiprocessing
 import queue
@@ -201,6 +202,8 @@ class RewardFunction:
     def __init__(self, config: RewardSignalConfig) -> None:
         self._config = config
 
+        self.__logger = logging.getLogger(__name__)
+
         self._queue_video_frames: queue.Queue[VideoFrame] = multiprocessing.Queue()
         self._queue_audio_frames: queue.Queue[AudioFrame] = multiprocessing.Queue()
 
@@ -226,21 +229,21 @@ class RewardFunction:
         return RMNVideoEmotionRecognizer(),
 
     def stop(self) -> None:
-        print("stopped")
+        self.__logger.info("stopped")
         self._is_running.value = False
 
     async def stop_async(self, delay_s: float = 0.0) -> None:
         if delay_s > 0:
             await asyncio.sleep(delay_s)
-        print("stopped")
+        self.__logger.info("stopped")
         self._is_running.value = False
 
     def push_video_frame(self, video_frame: VideoFrame) -> None:
-        print(f"{RewardFunction.__name__} got video frame t={video_frame.timestamp_s}", flush=True)
+        self.__logger.info(f"{RewardFunction.__name__} got video frame t={video_frame.timestamp_s}")
         self._queue_video_frames.put(video_frame)
 
     def push_audio_frame(self, audio_frame: AudioFrame) -> None:
-        print(f"{RewardFunction.__name__} got audio frame t={audio_frame.timestamp_s}", flush=True)
+        self.__logger.info(f"{RewardFunction.__name__} got audio frame t={audio_frame.timestamp_s}")
         self._queue_audio_frames.put(audio_frame)
 
     def gen(self) -> typing.Generator[RewardSignal, None, None]:
@@ -295,9 +298,8 @@ class RewardFunction:
             if skip_release_periods:
                 wallclock_pre_correction = wallclock_next
                 wallclock_next += math.ceil(lag / self._config.period_s) * self._config.period_s
-                print(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up "
-                      f"[{wallclock_pre_correction - wallclock_initial:.2f}, {wallclock_next - wallclock_initial})",
-                      file=sys.stderr)
+                self.__logger.info(f"Warning! Reward signal fell behind. lag={lag:.2f}. Skipping release(s) to catch up "
+                                   f"[{wallclock_pre_correction - wallclock_initial:.2f}, {wallclock_next - wallclock_initial})")
                 lag = now - wallclock_next
                 assert lag <= 0, lag  # sanity check - negative lag after correction
             assert lag <= self._config.threshold_latency_s, lag  # sanity check - lag never more than threshold
@@ -319,8 +321,8 @@ class RewardFunction:
                                              for timestamp_s, predicted_emotions in emotions_audio_frames
                                              if timestamp_s > timestamp_prev]
 
-                print("emotions_video_frames", emotions_video_frames)
-                print("emotions_audio_frames", emotions_audio_frames)
+                self.__logger.info(f"emotions_video_frames: {emotions_video_frames}" )
+                self.__logger.info(f"emotions_audio_frames: {emotions_audio_frames}")
 
                 included_emotions_video_frames = [
                     predicted_emotions for timestamp_s, predicted_emotions in emotions_video_frames
@@ -406,7 +408,7 @@ class RewardFunction:
                     ]
                     emotions_video_frames.extend(emotions_video_frames_new)
             if len(buffer_video_frames) != 0:
-                print(f'Video prediction took {timer.timedelta} '
+                self.__logger.info(f'Video prediction took {timer.timedelta} '
                       f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
             buffer_video_frames.clear()
 
@@ -419,5 +421,5 @@ class RewardFunction:
                     ]
                     emotions_audio_frames.extend(emotions_audio_frames_new)
             if len(buffer_audio_frames) != 0:
-                print(f'Audio prediction took {timer.timedelta}')
+                self.__logger.info(f'Audio prediction took {timer.timedelta}')
             buffer_audio_frames.clear()

@@ -1,6 +1,8 @@
 import abc
 import asyncio
 import dataclasses
+import logging
+
 import multiprocessing
 import os
 import queue
@@ -63,6 +65,10 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
     FORMAT = pyaudio.paInt16  # paInt8
     CHANNELS = 1
     RATE = 44100  # sample rate
+    
+    def __init__(self, segment_duration_s: float, period_propn: float):
+        super().__init__(segment_duration_s, period_propn)
+        self.__logger = logging.getLogger(__name__)
 
     def __enter__(self) -> 'MicrophoneFrameGenerator':
         self._temp_dir = tempfile.TemporaryDirectory()
@@ -88,11 +94,11 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
             while True:
                 # Each segment is a sequence of chunks. Read all the chunks for a new segment:
                 segment_timestamp = time.time() - time_initial
-                print(f"Getting a fresh audio segment @ {segment_timestamp}")
+                self.__logger.info(f"Getting a fresh audio segment @ {segment_timestamp}")
                 with CodeBlockTimer() as code_block_timer:
                     for _ in range(chunks_per_segment):
                         frames.append(_stream.read(MicrophoneFrameGenerator.CHUNK))  # 2 bytes(16 bits) per channel
-                print(f"Fresh audio segment retrieval took {code_block_timer.timedelta}")
+                self.__logger.info(f"Fresh audio segment retrieval took {code_block_timer.timedelta}")
 
                 with CodeBlockTimer() as code_block_timer:
                     while len(frames) >= chunks_per_segment:
@@ -117,7 +123,7 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
                         advancement = chunks_per_period_whole + int(remainder_counter)
                         remainder_counter -= int(remainder_counter)
                         frames = frames[advancement:]
-                print(f"Yielding audio segments took {code_block_timer.timedelta}")
+                self.__logger.info(f"Yielding audio segments took {code_block_timer.timedelta}")
         finally:
             _stream.stop_stream()
             _stream.close()

@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import dataclasses
+import logging
 import multiprocessing
 import os
 import queue
@@ -104,6 +105,8 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
         super().__init__(target_fps=target_fps)
         self._config = config
 
+        self.__logger = logging.getLogger(__name__)
+
         if not os.path.exists(self._config.path):
             raise FileNotFoundError(self._config.path)
 
@@ -112,13 +115,13 @@ class VideoFileFrameGenerator(VideoFrameGenerator):
             # we need to assign to a variable, even if unused, to prevent MediaPlayer from being GC'd
             # TODO(TK): consider moving this to the audio file sensor
             audio_player = MediaPlayer(self._config.path)
-            print("MediaPlayer (audio) loaded", flush=True)
+            self.__logger.info("MediaPlayer (audio) loaded")
         else:
             audio_player = None
         cap = cv2.VideoCapture(self._config.path)
         if not cap.isOpened():
             raise RuntimeError("Failed to open video file!")
-        print("VideoCapture file loaded", flush=True)
+        self.__logger.info("VideoCapture file loaded")
 
         timestamp_target: typing.Optional[float] = None
         wallclock_begin = time.time()

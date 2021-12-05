@@ -1,28 +1,30 @@
 import argparse
 import asyncio
-import os
+import logging
 import pathlib
 import signal
+import sys
 import time
 import typing
 from typing import Any
 
+import pandas as pd
 import tqdm
 import yaml
-import pandas as pd
+import tensorflow as tf
 
-from social_reward_function.output.file import RewardSignalFileWriter
-from social_reward_function.reward_function import RewardFunction, RewardSignal
+from social_reward_function.config import Config, FileInputConfig
 from social_reward_function.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
     AudioFileFrameGenerator
 from social_reward_function.input.video import VideoFrameGenerator, WebcamFrameGenerator, VideoFrame, \
     VideoFileFrameGenerator
-from social_reward_function.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
+from social_reward_function.output.file import RewardSignalFileWriter
 from social_reward_function.output.visualization import RewardSignalVisualizer
-from social_reward_function.config import Config, DatasetInputConfig, FileInputConfig
+from social_reward_function.reward_function import RewardFunction, RewardSignal
+from social_reward_function.util import interleave_fifo, async_gen_callback_wrapper, TaggedItem
 
 
-async def live(config: Config) -> None:
+async def live(config: Config, logger: logging.Logger) -> None:
     if config.input.source.file is not None:
         _audio_frame_generator: AudioFrameGenerator = AudioFileFrameGenerator(
             file=config.input.source.file.path,
@@ -82,45 +84,49 @@ async def live(config: Config) -> None:
         async for tagged_item in gen_combined:
             if _key_video_live in tagged_item.tags:
                 assert isinstance(tagged_item.item, VideoFrame)
-                # print(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} "
+                # self.__logger.info(f"Got video frame (live) - timestamp={tagged_item.item.timestamp_s} "
                 #       f"(wallclock={time.time() - time_begin})")  # TODO(TK): add at DEBUG logging level
                 visualizer.draw_video_live(video_frame=tagged_item.item)
 
             elif _key_video_downsampled in tagged_item.tags:
                 assert isinstance(tagged_item.item, VideoFrame)
-                print(f"Got video frame (downsampled) - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                logger.info(f"Got video frame (downsampled) - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
                 reward_function.push_video_frame(video_frame=tagged_item.item)
                 visualizer.draw_video_downsampled(video_frame=tagged_item.item)
 
             elif _key_audio in tagged_item.tags:
                 assert isinstance(tagged_item.item, AudioFrame)
-                print(f"Got audio frame - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                logger.info(f"Got audio frame - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
                 reward_function.push_audio_frame(audio_frame=tagged_item.item)
 
             elif _key_reward in tagged_item.tags:
                 assert isinstance(tagged_item.item, RewardSignal)
-                print(f"Got reward signal - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
-                print(tagged_item.item)
+                logger.info(f"Got reward signal - timestamp={tagged_item.item.timestamp_s} (wallclock={time.time() - time_begin})")
+                logger.info(tagged_item.item)
                 await visualizer.draw_reward_signal(reward_signal=tagged_item.item)
                 file_writer.append_reward_signal(reward_signal=tagged_item.item)
 
             else:
                 raise RuntimeError(f"Unexpected {TaggedItem.__name__}: {tagged_item}")
 
-        print("stopped")
+        logger.info("stopped")
         visualizer.sustain()
 
 
-async def dataset(config: Config) -> None:
+async def dataset(config: Config, logger: logging.Logger) -> None:
     if config.input.source.dataset is None:
         raise RuntimeError('dataset() called with no dataset provided in config')
     dataset_path = pathlib.Path(config.input.source.dataset.path)
 
     output_dir = pathlib.Path(config.output.file.path)
-    if output_dir.is_dir():
-        raise FileExistsError(f'Output dir already exists: {config.output.file.path}')
 
-    for video_path in tqdm.tqdm(list(dataset_path.glob('**/*.mp4'))):
+    for video_path in tqdm.tqdm(sorted(dataset_path.glob('**/*.mp4')), file=sys.stdout):
+        csv_path = output_dir.joinpath(video_path.relative_to(config.input.source.dataset.path)).parent.joinpath(f'{video_path.stem}.csv')
+        if csv_path.is_file():
+            logger.info(f'{str(csv_path)} already exists. Skipping...')
+            continue
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
         label = video_path.parent.stem
         reward_mapping = {
             'm2_strong_neg': -2,
@@ -205,8 +211,6 @@ async def dataset(config: Config) -> None:
         ])
 
         # Write to CSV:
-        csv_path = output_dir.joinpath(video_path.relative_to(config.input.source.dataset.path)).parent.joinpath(f'{video_path.stem}.csv')
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(
             str(csv_path),  # type: ignore
             header=True,
@@ -214,24 +218,49 @@ async def dataset(config: Config) -> None:
         )
 
 
+def configure_logging() -> None:
+    logging.captureWarnings(True)
+
+    logger_root = logging.getLogger()
+    logger_root.setLevel(logging.DEBUG)
+    logger_root.handlers.clear()
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    logger_root.addHandler(ch)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    fh = logging.FileHandler(filename='log.log', mode='a')
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
+    logger_root.addHandler(fh)
+
+
 async def main_async() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='srf.yaml')
+    parser.add_argument('--config', '-c', type=str, default='srf.yaml')
     args = parser.parse_args()
+
+    configure_logging()
+    logger = logging.getLogger(__name__)
 
     def signal_handler(signum: Any, frame: Any) -> None:
         raise KeyboardInterrupt()
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    with open(args.config) as f_config:
-        dict_config = yaml.load(f_config, Loader=yaml.CLoader)
-        config = Config.from_dict(dict_config)  # type: ignore
+    try:
+        with open(args.config) as f_config:
+            dict_config = yaml.load(f_config, Loader=yaml.CLoader)
+            config = Config.from_dict(dict_config)  # type: ignore
 
-    if config.input.source.dataset is not None:
-        await dataset(config=config)
-    else:
-        await live(config=config)
+        if config.input.source.dataset is not None:
+            await dataset(config=config, logger=logger)
+        else:
+            await live(config=config, logger=logger)
+    except Exception as exc:
+        logger.exception(exc)
 
 
 def main() -> None:

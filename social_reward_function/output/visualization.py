@@ -1,4 +1,5 @@
 import functools
+import logging
 import math
 import sys
 import time
@@ -18,6 +19,8 @@ from social_reward_function.reward_function import RewardSignal
 class RewardSignalVisualizer:
     def __init__(self, config: VisualizationOutputConfig) -> None:
         self._config = config
+
+        self.__logger = logging.getLogger(__name__)
 
         if self._config.display_plots:
             # Ensure frames are maximized:
@@ -98,11 +101,11 @@ class RewardSignalVisualizer:
             average_reward_signal /= len(self._moving_average_window)
         else:
             average_reward_signal = None
-        print("average_reward_signal", average_reward_signal, flush=True)
+        self.__logger.info("average_reward_signal", average_reward_signal)
 
         lag = time.time() - self._time_begin - reward_signal.timestamp_s
         if lag > self._config.threshold_lag_s:
-            print(f"reward signal viz falling behind! lag={lag:.2f}", file=sys.stderr)
+            self.__logger.info(f"reward signal viz falling behind! lag={lag:.2f}")
 
         # Append the new reward signal and drop old data points:
         self._reward_signal.append(reward_signal)
