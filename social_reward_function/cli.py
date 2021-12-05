@@ -8,10 +8,9 @@ import time
 import typing
 from typing import Any
 
-import pandas as pd
-import tqdm
+import pandas as pd  # type: ignore
+import tqdm  # type: ignore
 import yaml
-import tensorflow as tf
 
 from social_reward_function.config import Config, FileInputConfig
 from social_reward_function.input.audio import AudioFrameGenerator, MicrophoneFrameGenerator, AudioFrame, \
@@ -212,7 +211,7 @@ async def dataset(config: Config, logger: logging.Logger) -> None:
 
         # Write to CSV:
         df.to_csv(
-            str(csv_path),  # type: ignore
+            str(csv_path),  # noqa
             header=True,
             index=True,
         )

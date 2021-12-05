@@ -5,7 +5,6 @@ import logging
 import math
 import multiprocessing
 import queue
-import sys
 import time
 import typing
 
@@ -321,7 +320,7 @@ class RewardFunction:
                                              for timestamp_s, predicted_emotions in emotions_audio_frames
                                              if timestamp_s > timestamp_prev]
 
-                self.__logger.info(f"emotions_video_frames: {emotions_video_frames}" )
+                self.__logger.info(f"emotions_video_frames: {emotions_video_frames}")
                 self.__logger.info(f"emotions_audio_frames: {emotions_audio_frames}")
 
                 included_emotions_video_frames = [
@@ -408,8 +407,9 @@ class RewardFunction:
                     ]
                     emotions_video_frames.extend(emotions_video_frames_new)
             if len(buffer_video_frames) != 0:
-                self.__logger.info(f'Video prediction took {timer.timedelta} '
-                      f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
+                self.__logger.info(
+                    f'Video prediction took {timer.timedelta} '
+                    f'(={timer.timedelta / len(buffer_video_frames) if len(buffer_video_frames) else "NaN"} per frame)')
             buffer_video_frames.clear()
 
             buffer_audio_frames = [frame for frame in buffer_audio_frames if np.mean(np.power(frame.audio_data, 2)) >= self._config.threshold_audio_power]

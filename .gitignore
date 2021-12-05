@@ -8,3 +8,5 @@ __pycache__
 /dist
 /output.yaml
 /output/
+/log.log
+/srf-modified.yaml

@@ -65,7 +65,7 @@ class MicrophoneFrameGenerator(AudioFrameGenerator):
     FORMAT = pyaudio.paInt16  # paInt8
     CHANNELS = 1
     RATE = 44100  # sample rate
-    
+
     def __init__(self, segment_duration_s: float, period_propn: float):
         super().__init__(segment_duration_s, period_propn)
         self.__logger = logging.getLogger(__name__)
