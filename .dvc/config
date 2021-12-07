@@ -1,0 +1,5 @@
+[core]
+    remote = minio
+['remote "minio"']
+    url = s3://datasets
+    endpointurl = http://minio.internal.thomaskingsford.com:9000
