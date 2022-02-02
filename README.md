@@ -46,4 +46,12 @@ that the generation of more realistic datasets will lead to more accurate models
 ## Citation
 
 If you use this work, please cite:
-**(insert citation)**
+	
+    @misc{kingsford2022,
+      title={A General, Evolution-Inspired Reward Function for Social Robotics}, 
+      author={Thomas Kingsford},
+      year={2022},
+      eprint={2202.00617},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+    }
